@@ -1,0 +1,29 @@
+{
+  "asset": {
+    "version": "1.0",
+    "gltfUpAxis": "Y"
+  },
+  "geometricError": 3196.93526,
+  "refine": "REPLACE",
+  "root": {
+    "boundingVolume": {
+      "sphere": [-1881346.47572, 4751493.41974, 3804280.52719, 3196.93526]
+    },
+    "geometricError": 3196.93526,
+    "children": [{
+      "boundingVolume": {
+        "sphere": [-1882014.76567, 4750646.35180, 3805686.59619, 306.08250]
+      },
+      "geometricError": 306.08250,
+      "children": [{
+        "boundingVolume": {
+          "sphere": [-1882014.76567, 4750646.35180, 3805686.59619, 306.08250]
+        },
+        "geometricError": 0,
+        "content": {
+          "uri": "BlockABBABXBB\/BlockABBABXBB.json"
+        }
+      }]
+    }]
+  }
+}

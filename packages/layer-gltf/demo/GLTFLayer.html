@@ -1,0 +1,118 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <title>GLTF DEMO</title>
+    <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.js"></script>
+    <script type="text/javascript" src="../node_modules/@maptalks/gl/dist/maptalksgl.js"></script>
+    <script type="text/javascript" src="../dist/maptalks.gltf.js"></script>
+    <style>
+        html,
+        body {
+            margin: 0px;
+            height: 100%;
+            width: 100%;
+        }
+
+        #map1 {
+            position: absolute;
+            width: 800px;
+            height: 300px;
+            right: 100px;
+            top: 0px;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+        }
+    </style>
+</head>
+
+<body>
+    <input id="btn" type="button" style="width: 100px;height: 20px;" value="setNodeTRS"/>
+    <div id="map"></div>
+    <script>
+        const { createREGL, mat4, reshader } = maptalksgl;
+        var map = new maptalks.Map('map', {
+            center: [120, 30],
+            zoom: 14,
+            pitch : 45,
+            baseLayer: new maptalks.TileLayer('base', {
+                urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                subdomains: ['a','b','c','d'],
+                attribution: '&copy; <a href="http://osm.org">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/">CARTO</a>'
+            })
+        });
+        //gltf模型的路径
+        var url0 = 'gltf/cube-animation/cube.gltf';
+        var url1 = 'gltf/DamagedHelmet/glTF/DamagedHelmet.gltf';
+        var url2 = 'gltf/Duck/Duck.glb';
+        var url3 = 'gltf/AnimatedMorphCube/glTF/AnimatedMorphCube.gltf';
+        var url4 = 'gltf/shanghai-sandboxie/scene.gltf';
+        var url5 = 'gltf/tyb/太阳板.gltf';
+        var url6 = 'gltf/RobotExpressive/RobotExpressive.glb';
+        var url7 = 'gltf/CesiumMan/CesiumMan.gltf';
+        var url8 = 'gltf/wy/wy.gltf';
+        var url9 = 'gltf/scene/scene.gltf';
+        var center = map.getCenter();
+
+
+        var Config = function () {
+            this.shader = 'phong';
+            this.animation = true;
+            this.loop = false;
+            this.visible = true;
+            this.speed = 1.0;
+            this.x = 0.0;
+            this.y = 0.0;
+            this.z = 0.0;
+            this.axisX = 0.0;
+            this.axisY = 0.0;
+            this.axisZ = 0.0;
+            this.angle = 0.0;
+            this.scaleX = 1.0;
+            this.scaleY = 1.0;
+            this.scaleZ = 1.0;
+            this.ambientStrength = 0.5;
+            this.specularStrength = 0.8;
+            this.materialShininess = 32;//反光度，即影响镜面高光的散射/半径
+            this.opacity = 0.8;
+            this.lightAmbient = [240, 240, 240, 1.0];
+            this.lightDiffuse = [100, 100, 100, 1.0];
+            this.lightSpecular = [20, 150, 200, 1.0];
+        }
+        var options = new Config();
+        var gltflayer = new maptalks.GLTFLayer('gltf').addTo(map);//添加一个gltf图层到地图上
+        var gltfMarker = new maptalks.GLTFMarker(center, {
+            symbol: {
+                url: url6,
+                modelHeight: 1000
+                
+            },
+            
+        });
+
+        gltfMarker.addTo(gltflayer);
+        gltfMarker.on('click', e => {
+            alert(e.pickingId);
+        });
+        gltfMarker.on('mousemove', e => {
+            map.setCursor('url(images/cursor.png) 9 0, auto');
+        });
+        gltfMarker.on('mouseleave', e => {
+            map.resetCursor();
+        });
+
+        document.getElementById('btn').onclick = function() {
+            gltfMarker.setNodeTRS(4, {
+               rotation: [45, 0, 0],
+               scale: [2, 2, 2]
+            });
+        }
+    </script>
+</body>
+
+</html>

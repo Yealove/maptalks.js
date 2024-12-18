@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>transformControl</title>
+  <style type="text/css">
+    html,body {
+        margin:0px;
+        height:100%;
+        width: 100%;
+    }
+    #map { width: 100%; height: 100%; background-color : #000;}
+  </style>
+    <script type="text/javascript" src="../node_modules/maptalks/dist/maptalks.js"></script>
+    <script type='text/javascript' src='../node_modules/@maptalks/gl/dist/maptalksgl.js'></script>
+    <script type='text/javascript' src='../node_modules/@maptalks/gltf-layer/dist/maptalks.gltf.js'></script>
+    <script src="../dist/transform-control.js"></script>
+  <body>
+    <div id="map"></div>
+    <script type="module">
+        const TEMP_POINT = new maptalks.Point(0, 0);
+        let mode = 0;
+        const { reshader } = maptalksgl;
+        var map = new maptalks.Map("map",{
+            center : [108.95888623345706, 34.220502132776204],
+            zoom   :  17,
+            pitch : 70,
+            centerCross : true,
+            doubleClickZoom : false,
+            lights: {
+                ambient: {
+                    color: [0.2, 0.2, 0.2],
+                    exposure: 1.5
+                },
+                directional: {
+                    color: [1.0, 0.2, 0.4],
+                    direction: [-1, 1, -0.2]
+                }
+            }
+        });
+        const center = map.getCenter();
+        const sceneConfig = {
+            shadow: {
+                type: 'esm',
+                enable: false,
+                quality: 'high',
+                opacity: 0.8,
+                color: [0, 0, 0],
+                blurOffset: 1.0
+            },
+            postProcess: {
+                enable: true,
+                antialias: {
+                    enable: true,
+                },
+                taa: {
+                    enable: true,
+                },
+                bloom: {
+                    enable: true,
+                    threshold: 0,
+                    factor: 1,
+                    radius: 0.4,
+                },
+                outline: {
+                    enable: true,
+                    outlineColor: [1.0, 0, 0],
+                    outlineWidth: 2
+                }
+            },
+            ground: {
+              enable: true,
+              renderPlugin: {
+                type: "lit"
+              },
+              symbol: {
+                polygonOpacity: 1,
+                material: {
+                  baseColorFactor: [0.78235, 0.78235, 0.78235, 1],
+                  hsv: [0, 0, -0.532],
+                  roughnessFactor: 0.22,
+                  metallicFactor: 0.58,
+                },
+              },
+            },
+        };
+        const gltflayer = new maptalks.GLTFLayer('gltf');
+        const myMarker1 = new maptalks.GLTFMarker(center.add(-0.002, 0),
+        {
+            symbol: {
+                url: 'cube',
+                modelHeight: 75,
+                anchorZ: 'bottom'
+            }
+        }
+        ).addTo(gltflayer);
+        const groupgllayer = new maptalks.GroupGLLayer('gl', [gltflayer], {sceneConfig}).addTo(map);
+        const transformControl = new maptalks.TransformControl({ mode: 'translate' });
+        transformControl.addTo(map);
+    </script>
+  </body>
+</html>

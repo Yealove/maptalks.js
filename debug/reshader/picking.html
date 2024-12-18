@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Picking</title>
+  <style type="text/css">
+    html,body{margin:0px;height:100%;width:100%}
+    /* .container{width:1000px;height:800px} */
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.js" type="text/javascript"></script>
+  <script src="../../packages/gl/dist/maptalksgl-dev.js" type="text/javascript"></script>
+  <body>
+    <canvas id="canvas" width=500 height=400 class="container" style="border : 1px solid"></canvas>
+    <div id="info"></div>
+    <canvas id="debug" width=500 height=400 class="container" style="border : 1px solid"></canvas>
+    <!-- <script src="./common/regl.js" type="text/javascript"></script> -->
+    <script type="module">
+        import cubeData from './common/cube.js';
+
+        const { createREGL, mat4, reshader } = maptalksgl;
+
+
+        const regl = createREGL({
+            canvas : canvas
+        });
+
+        const vert = `
+            attribute vec3 aPosition;
+            attribute float aPickingId;
+            uniform mat4 projViewModelMatrix;
+
+            void main()
+            {
+                gl_Position = projViewModelMatrix * vec4(aPosition, 1.0);
+
+            }
+        `;
+
+        const frag = `
+            precision mediump float;
+            uniform vec3 color;
+
+            void main() {
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        const shader = new reshader.MeshShader({
+            vert,
+            frag,
+            uniforms : [
+                'color',
+                {
+                    name : 'projViewModelMatrix',
+                    type : 'function',
+                    fn : function (context, props) {
+                        //model是自动设置的值，来源于mesh的localTransform
+                        return mat4.multiply([], props['projViewMatrix'], props['modelMatrix']);
+                    }
+                }
+
+            ],
+            defines: {
+                'ENABLE_PICKING': 1,
+
+            }
+        });
+
+        const renderer = new reshader.Renderer(regl);
+
+        //picking对象所需的顶点着色器代码
+        //它的主要逻辑与绘制renderer中的顶点着色器相同
+        //但需要引入fbo_picking_vert代码后，设置顶点的深度值
+        const pickingVert = `
+            attribute vec3 aPosition;
+            uniform mat4 projViewModelMatrix;
+
+            //引入fbo picking的vert相关函数
+            #include <fbo_picking_vert>
+
+            void main()
+            {
+                gl_Position = projViewModelMatrix * vec4(aPosition, 1.0);
+                //传入gl_Position的depth值
+                fbo_picking_setData(gl_Position.w, true);
+            }
+
+        `
+
+        //创建picking对象
+        const picking = new reshader.FBORayPicking(
+                renderer,
+                {
+                    vert : pickingVert,
+                    uniforms : [
+                        {
+                            name : 'projViewModelMatrix',
+                            type : 'function',
+                            fn : function (context, props) {
+                                return mat4.multiply([], props['projViewMatrix'], props['modelMatrix']);
+                            }
+                        }
+                    ]
+                },
+                regl.framebuffer(canvas.width, canvas.height)
+            );
+
+        render();
+
+        //主绘制方法
+        function render() {
+            // camera's position
+            const cameraPos = [0, 8, 8];
+            const { viewProjMatrix, viewMatrix, projMatrix } = getViewProjection(cameraPos);
+
+            const  { scene1, scene2 } = getScene();
+
+            const uniforms1 = {
+                'projViewMatrix' : viewProjMatrix,
+                'color' : [0, 1, 0]
+            };
+            const uniforms2 = {
+                'projViewMatrix' : viewProjMatrix,
+                'color' : [1, 0, 0]
+            };
+            renderer.render(
+                shader,
+                uniforms1,
+                scene1
+            );
+
+            picking.clear();
+
+            //渲染picking帧缓冲
+            picking.render(scene1.getMeshes(), uniforms1);
+
+            renderer.render(
+                shader,
+                uniforms2,
+                scene2
+            );
+
+            //渲染picking帧缓冲
+            picking.render(scene2.getMeshes(), uniforms2);
+
+            //点选
+            //meshId 是 mesh 在 meshes 中的序号
+            //pickingId 是 被点击到的片元的 aPickingId 值
+            //point 是命中点的世界坐标值
+            /*const { meshId, pickingId, point } = picking.pick(
+                canvas.width / 2,   // 屏幕坐标 x轴的值
+                canvas.height / 2,  // 屏幕坐标 y轴的值
+                {
+                   'projViewMatrix' : viewProjMatrix
+                },           // pickingVert中所需的uniforms值
+                {
+                    viewMatrix : viewMatrix,  //viewMatrix和projMatrix用于计算点的世界坐标值
+                    projMatrix : projMatrix,
+                    returnPoint : true
+                }
+            );
+            document.getElementById('info').innerHTML = '屏幕中心点选取物<br>'+
+                'meshId：' + meshId +
+                '<br>pickingId : ' + pickingId +
+                '<br>坐标：' + point;
+            */
+            canvas.onclick = function(e) {
+                const picked = picking.pick(
+                    e.x,   // 屏幕坐标 x轴的值
+                    e.y,  // 屏幕坐标 y轴的值
+                    20,
+                    {
+                        'projViewMatrix' : viewProjMatrix
+                    },           // pickingVert中所需的uniforms值
+                    {
+                        viewMatrix : viewMatrix,  //viewMatrix和projMatrix用于计算点的世界坐标值
+                        projMatrix : projMatrix,
+                        returnPoint : true
+                    }
+               );
+               const { meshId, pickingId, point } = picked;
+               debugFBO('debug', picking._fbo1);
+               document.getElementById('info').innerHTML = '屏幕中心点选取物<br>'+
+                'meshId：' + meshId +
+                '<br>pickingId : ' + pickingId +
+                '<br>坐标：' + point;
+            }
+        }
+
+        function getScene() {
+            const mesh1 = getMesh(0, [0,0,0]);
+            const mesh2 = getMesh(1, [3,0,0]);
+            //const scene = new reshader.Scene([mesh1, mesh2]);
+            //return scene;
+            const scene1 = new reshader.Scene([mesh1]);
+            const scene2 = new reshader.Scene([mesh2]);
+            return { scene1, scene2 };
+        }
+
+        function getMesh(id, trans) {
+            const aPickingId = [];
+            for (let i = 0; i < cubeData.vertices.length / 3; i++) {
+                aPickingId.push(id);
+            }
+            const cube = new reshader.Geometry(
+                {
+                    aPosition : cubeData.vertices,
+                    aPickingId
+                },
+                cubeData.indices
+            );
+            cube.generateBuffers(regl);
+
+            const cubeMesh = new reshader.Mesh(cube);
+
+            const transformMat = mat4.identity([]);
+            mat4.translate(transformMat, transformMat, trans);
+            mat4.scale(transformMat, transformMat, [0.5, 0.5, 0.5]);
+            cubeMesh.setLocalTransform(transformMat);
+            return cubeMesh;
+        }
+
+        function getViewProjection(cameraPos) {
+            const aspect = canvas.width / canvas.height;
+            const projMatrix = mat4.perspective([], 60 * Math.PI / 180, aspect, 1, 20);
+            const viewMatrix = mat4.lookAt([], cameraPos, [0, 0, 0], [0, 1, 0]);
+            const viewProjMatrix = mat4.multiply([], projMatrix, viewMatrix);
+            return {
+                viewProjMatrix,
+                viewMatrix,
+                projMatrix
+            };
+        }
+
+        function debugFBO(id, fbo) {
+            const canvas = document.getElementById(id);
+            const width = fbo.width, height = fbo.height;
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            const pixels = regl.read({
+                framebuffer : fbo
+            });
+
+            const halfHeight = height / 2 | 0;  // the | 0 keeps the result an int
+            const bytesPerRow = width * 4;
+
+            for (let i = 0; i < pixels.length; i++) {
+                pixels[i] *= 255;
+            }
+
+            // make a temp buffer to hold one row
+            const temp = new Uint8Array(width * 4);
+            for (let y = 0; y < halfHeight; ++y) {
+                const topOffset = y * bytesPerRow;
+                const bottomOffset = (height - y - 1) * bytesPerRow;
+
+                // make copy of a row on the top half
+                temp.set(pixels.subarray(topOffset, topOffset + bytesPerRow));
+
+                // copy a row from the bottom half to the top
+                pixels.copyWithin(topOffset, bottomOffset, bottomOffset + bytesPerRow);
+
+                // copy the copy of the top half row to the bottom half
+                pixels.set(temp, bottomOffset);
+            }
+
+            // This part is not part of the answer. It's only here
+            // to show the code above worked
+            // copy the pixels in a 2d canvas to show it worked
+            const imgdata = new ImageData(width, height);
+            imgdata.data.set(pixels);
+            ctx.putImageData(imgdata, 0, 0);
+        }
+
+
+    </script>
+  </body>
+</html>

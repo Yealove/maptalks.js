@@ -1,0 +1,94 @@
+{
+  "asset": {
+    "version": "1.0",
+    "tilesetVersion": "2020-09-19 17:29:03.107",
+    "extras": {
+      "copyright": "**Trial version, Do not use for commercial purpose!** Copyright BimAngle 2017-2020",
+      "generator": "**Trial version, Do not use for commercial purpose!** BimAngle Engine (For Revit) 2020.8.3",
+      "title": "\u53e4\u5efaRevit\u6a21\u578b.rvt",
+      "cesium": {
+        "credits": [
+          {
+            "html": "<font color='#FFFF00'><b>BimAngle Engine: Trial version, Do not use for commercial purpose!</b></font>",
+            "showOnScreen": true
+          }
+        ]
+      }
+    }
+  },
+  "geometricError": 0,
+  "root": {
+    "boundingVolume": {
+      "box": [
+        0.789444846182505,
+        1.2162687154412666,
+        7.9910821488446171,
+        25.955027682837908,
+        0.0,
+        0.0,
+        0.0,
+        22.394821829761895,
+        0.0,
+        0.0,
+        0.0,
+        8.5910833645119062
+      ]
+    },
+    "geometricError": 0,
+    "refine": "ADD",
+    "content": {
+      "uri": "0/m.cmpt"
+    },
+    "children": [
+      {
+        "boundingVolume": {
+          "box": [
+            -10.801505356578957,
+            -6.48123969339187,
+            4.37499933954778,
+            3.6529311440844481,
+            0.0,
+            0.0,
+            0.0,
+            4.028020709762294,
+            0.0,
+            0.0,
+            0.0,
+            4.3749998189824044
+          ]
+        },
+        "geometricError": 0.0,
+        "content": {
+          "uri": "0/0/m.cmpt"
+        }
+      }
+    ],
+    "transform": [
+      -0.89545552797747519,
+      -0.44515098271775316,
+      0.0,
+      0.0,
+      0.28563728871918392,
+      -0.5745814321660504,
+      0.76698599537616352,
+      0.0,
+      -0.34142456957245315,
+      0.68680184944089162,
+      0.64166383948048367,
+      0.0,
+      -2180660.0233459282,
+      4386565.7908312334,
+      4070836.4050880675,
+      1.0
+    ]
+  },
+  "extras": {
+    "BIMANGLE_georeferencing": {
+      "ver": 1.0,
+      "longitude": 116.432999,
+      "latitude": 39.916,
+      "height": 0.0,
+      "rotation": 0.0
+    }
+  }
+}

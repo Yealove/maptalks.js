@@ -1,0 +1,53 @@
+{
+  "asset": {
+    "version": "1.0"
+  },
+  "geometricError": 146.660080,
+  "root": {
+    "boundingVolume": {
+      "region": [
+        2.046671,
+        0.622784,
+        2.046695,
+        0.622795,
+        90.798501,
+        115.963700
+      ]
+    },
+    "refine": "REPLACE",
+    "geometricError": 0,
+    "children": [
+      {
+        "boundingVolume": {
+          "region": [
+            2.046677,
+            0.622794,
+            2.046678,
+            0.622795,
+            91.435304,
+            98.298402
+          ]
+        },
+        "geometricError": 0,
+        "children": [
+          {
+            "boundingVolume": {
+              "region": [
+                2.046677,
+                0.622794,
+                2.046678,
+                0.622795,
+                91.435304,
+                98.298402
+              ]
+            },
+            "geometricError": 0,
+            "content": {
+              "uri": "Data/tree_001/tree_001.json"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

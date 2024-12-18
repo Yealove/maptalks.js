@@ -1,0 +1,35 @@
+{
+  "name": "@maptalks/transcoders.ktx2",
+  "version": "0.98.3",
+  "description": "ktx2 transcoder for @maptalks/gl",
+  "main": "dist/transcoders.ktx2.js",
+  "module": "dist/transcoders.ktx2.es.js",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run clean && rollup --environment BUILD:production -c rollup.config.js",
+    "build-dev": "rollup -c rollup.config.js",
+    "dev": "rollup -w -c rollup.config.js"
+  },
+  "keywords": [
+    "webgl",
+    "ktx2"
+  ],
+  "files": [
+    "dist/transcoders.ktx2.js",
+    "dist/transcoders.ktx2.es.js"
+  ],
+  "author": "fuzhen",
+  "license": "ISC",
+  "devDependencies": {
+    "@maptalks/gl": "workspace:*",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^5.0.5",
+    "@rollup/plugin-terser": "0.4.4",
+    "eslint": "^8.57.0",
+    "eslint-plugin-mocha": "^10.4.1",
+    "rollup": "^4.17.2",
+    "rollup-plugin-polyfill-node": "^0.13.0"
+  },
+  "gitHead": "9eeea4807723d460fa7e09969c6556d53f6bed84"
+}

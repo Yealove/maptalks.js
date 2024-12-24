@@ -1,6 +1,6 @@
 {
   "name": "@maptalks/reshader.gl",
-  "version": "0.101.2",
+  "version": "0.103.1",
   "description": "A shader centric WebGL engine based on regl",
   "module": "dist/reshadergl.es.js",
   "scripts": {
@@ -25,7 +25,7 @@
   "dependencies": {
     "@maptalks/regl": "^3.4.0",
     "@maptalks/tbn-packer": "^1.4.5",
-    "earcut": "^2.2.4",
+    "earcut": "^3.0.1",
     "gl-matrix": "^3.4.0"
   },
   "devDependencies": {
@@ -34,7 +34,7 @@
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "0.4.4",
     "eslint": "^8.57.0",
-    "eslint-plugin-mocha": "^10.4.1",
+    "eslint-plugin-mocha": "^10.5.0",
     "mocha": "^10.3.0",
     "rollup": "^4.17.2",
     "rollup-plugin-dts": "^6.1.0"

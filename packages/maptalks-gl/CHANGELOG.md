@@ -1,5 +1,58 @@
 # maptalks-gl
 
+## 0.105.2
+
+### Patch Changes
+
+- fix bundle export and analysis's import of reshader.gl
+- Updated dependencies
+  - @maptalks/gl@0.104.1
+  - @maptalks/3dtiles@0.104.1
+  - @maptalks/gltf-layer@0.103.1
+  - @maptalks/video-layer@0.101.1
+  - @maptalks/transform-control@0.104.1
+  - @maptalks/vt@0.103.2
+
+## 0.105.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @maptalks/vt@0.103.1
+  - @maptalks/gltf-layer@0.103.0
+
+## 0.105.0
+
+### Minor Changes
+
+- fix conlict versions on npm
+
+### Patch Changes
+
+- Updated dependencies
+  - @maptalks/gl@0.104.0
+  - @maptalks/3dtiles@0.104.0
+  - @maptalks/gltf-layer@0.103.0
+  - @maptalks/video-layer@0.101.0
+  - @maptalks/transform-control@0.104.0
+  - @maptalks/vt@0.103.0
+
+## 0.104.0
+
+### Minor Changes
+
+- Bug fixes, remove analysis and msd-loader from maptalks-gl
+
+### Patch Changes
+
+- Updated dependencies
+  - @maptalks/gl@0.103.0
+  - @maptalks/3dtiles@0.103.0
+  - @maptalks/gltf-layer@0.102.0
+  - @maptalks/video-layer@0.99.0
+  - @maptalks/transform-control@0.103.0
+  - @maptalks/vt@0.102.0
+
 ## 0.103.2
 
 ### Patch Changes

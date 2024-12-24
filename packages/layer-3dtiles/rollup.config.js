@@ -111,7 +111,7 @@ function glsl() {
 module.exports = [
     {
         input: 'src/worker/index.js',
-        external: ['maptalks'],
+        external: ['@maptalks/map'],
         plugins: [
             resolve({}),
             commonjs(),
@@ -157,11 +157,11 @@ module.exports = [
             glsl(),
             typescript({ tsconfig: './tsconfig.json', sourceMap: true } )
         ].concat(plugins),
-        external: ['maptalks', '@maptalks/gl'],
+        external: ['@maptalks/map', '@maptalks/gl'],
         output: {
             globals: {
-                'maptalks': 'maptalks',
-                '@maptalks/gl': 'maptalksgl'
+                '@maptalks/map': 'maptalks',
+                '@maptalks/gl': 'maptalks'
             },
             banner,
             outro,
@@ -183,7 +183,7 @@ if (production) {
         {
             input: 'build/index.js',
             external: [
-                'maptalks',
+                '@maptalks/map',
                 '@maptalks/gl',
                 'gl-matrix',
                 'frustum-intersects',
@@ -204,8 +204,8 @@ if (production) {
             ].concat(plugins),
             output: {
                 globals: {
-                    'maptalks': 'maptalks',
-                    '@maptalks/gl': 'maptalksgl'
+                    '@maptalks/map': 'maptalks',
+                    '@maptalks/gl': 'maptalks'
                 },
                 banner,
                 outro,

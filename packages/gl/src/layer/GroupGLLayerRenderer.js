@@ -1,15 +1,12 @@
-import * as maptalks from 'maptalks';
+import * as maptalks from '@maptalks/map';
 import { vec2, vec3, mat4 } from '@maptalks/reshader.gl';
-import { GLContext } from '@maptalks/fusiongl';
 import ShadowProcess from './shadow/ShadowProcess';
 import * as reshader from '@maptalks/reshader.gl';
-import createREGL from '@maptalks/regl';
 import GroundPainter from './GroundPainter';
 import EnvironmentPainter from './EnvironmentPainter';
 import WeatherPainter from './weather/WeatherPainter';
 import PostProcess from './postprocess/PostProcess.js';
 import AnalysisPainter from '../analysis/AnalysisPainter.js';
-import { createGLContext } from './util/util.js';
 
 const EMPTY_COLOR = [0, 0, 0, 0];
 const DEFAULT_LIGHT_DIRECTION = [1, 1, -1];
@@ -104,7 +101,7 @@ class GroupGLLayerRenderer extends maptalks.renderer.CanvasRenderer {
             this._renderInMode('default', null, methodName, args, true);
             return;
         }
-        const fGL = this.glCtx;
+        const fGL = this.reglGL;
 
         const sceneConfig =  this.layer._getSceneConfig();
         const config = sceneConfig && sceneConfig.postProcess;
@@ -247,7 +244,7 @@ class GroupGLLayerRenderer extends maptalks.renderer.CanvasRenderer {
         }
         const fbo = this._getOutlineFBO();
 
-        const fGl = this.glCtx;
+        const fGl = this.reglGL;
         fGl.resetDrawCalls();
         this.forEachRenderer((renderer, layer) => {
             if (!layer.isVisible()) {
@@ -473,34 +470,14 @@ class GroupGLLayerRenderer extends maptalks.renderer.CanvasRenderer {
         return true;
     }
 
-    createContext() {
+    initContext() {
+        super.initContext();
         const layer = this.layer;
-        const attributes = layer.options['glOptions'] || {
-            alpha: true,
-            depth: true,
-            stencil: true
-        };
-        attributes.preserveDrawingBuffer = true;
-        attributes.antialias = !!layer.options['antialias'];
-        this.glOptions = attributes;
-        const gl = this.gl = createGLContext(this.canvas, attributes, layer.options['onlyWebGL1']);        // this.gl = gl;
-        this._initGL(gl);
-        gl.wrap = () => {
-            return new GLContext(this.gl);
-        };
-        this.glCtx = gl.wrap();
-        this.canvas.gl = this.gl;
-        this.reglGL = gl.wrap();
-        this.regl = createREGL({
-            gl: this.reglGL,
-            attributes,
-            extensions: layer.options['extensions'],
-            optionalExtensions: layer.options['optionalExtensions']
-        });
-        this.gl.regl = this.regl;
+        const { regl, gl, reglGL } = this.context;
+        this.regl = regl;
+        this.reglGL = reglGL;
+        this.gl = gl;
         this._jitter = [0, 0];
-
-
         this._groundPainter = new GroundPainter(this.regl, this.layer);
         this._envPainter = new EnvironmentPainter(this.regl, this.layer);
         const weatherConfig = this.layer.getWeatherConfig();
@@ -534,8 +511,8 @@ class GroupGLLayerRenderer extends maptalks.renderer.CanvasRenderer {
         this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
     }
 
-    clearCanvas() {
-        super.clearCanvas();
+    clearContext() {
+        super.clearContext();
         this._clearFramebuffers();
     }
 
@@ -572,14 +549,16 @@ class GroupGLLayerRenderer extends maptalks.renderer.CanvasRenderer {
         if (this._outlineFBO) {
             regl.clear({
                 color: EMPTY_COLOR,
+                depth: 1,
+                stencil: 0xFF,
                 framebuffer: this._outlineFBO
             });
         }
-        regl.clear({
-            color: EMPTY_COLOR,
-            depth: 1,
-            stencil: 0xFF
-        });
+        // regl.clear({
+        //     color: EMPTY_COLOR,
+        //     depth: 1,
+        //     stencil: 0xFF
+        // });
     }
 
     resizeCanvas() {
@@ -689,6 +668,8 @@ class GroupGLLayerRenderer extends maptalks.renderer.CanvasRenderer {
             this._weatherPainter.dispose();
             delete this._weatherPainter;
         }
+        delete this.gl;
+        delete this.regl;
         super.onRemove();
     }
 

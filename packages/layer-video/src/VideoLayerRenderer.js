@@ -1,4 +1,4 @@
-import * as maptalks from 'maptalks';
+import * as maptalks from '@maptalks/map';
 import { createREGL, reshader, mat4, quat } from '@maptalks/gl';
 import { intersectsBox } from 'frustum-intersects';
 
@@ -318,18 +318,6 @@ class VideoLayerRenderer extends maptalks.renderer.CanvasRenderer {
             this._shader.dispose();
         }
         super.remove();
-    }
-
-    clearCanvas() {
-        if (!this.canvas) {
-            return;
-        }
-        this.regl.clear({
-            color: [0, 0, 0, 0],
-            depth: 1,
-            stencil : 0
-        });
-        super.clearCanvas();
     }
 
     _deleteScene(videoId) {

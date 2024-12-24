@@ -1,11 +1,11 @@
-import * as maptalks from 'maptalks';
+import * as maptalks from '@maptalks/map';
 import Renderer from './GroupGLLayerRenderer.js';
 import { vec3 } from '@maptalks/reshader.gl';
 import { isNil, extend } from './util/util.js';
 import TerrainLayer from './terrain/TerrainLayer';
 import RayCaster from './raycaster/RayCaster.js';
 import Mask from './mask/Mask.js';
-import { LayerJSONType } from 'maptalks';
+import { LayerJSONType } from '@maptalks/map';
 
 const options: GroupGLLayerOptions = {
     renderer : 'gl',
@@ -34,9 +34,6 @@ const options: GroupGLLayerOptions = {
         'WEBGL_compressed_texture_s3tc',
         'WEBGL_compressed_texture_s3tc_srgb'
     ],
-    forceRenderOnZooming : true,
-    forceRenderOnMoving : true,
-    forceRenderOnRotating : true,
     viewMoveThreshold: 100,
     geometryEvents: true,
     multiSamples: 4,
@@ -285,7 +282,6 @@ export default class GroupGLLayer extends maptalks.Layer {
         this._layerMap[layer.getId()] = layer;
         layer['_canvas'] = (this as any).getRenderer().canvas;
         layer['_bindMap'](map);
-        layer.once('renderercreate', this._onChildRendererCreate, this);
         // layer.on('setstyle updatesymbol', this._onChildLayerStyleChanged, this);
         layer.remove = () => {
             this.removeLayer(layer);
@@ -345,11 +341,6 @@ export default class GroupGLLayer extends maptalks.Layer {
         const layer = this.getLayer(oldId);
         delete this._layerMap[oldId];
         this._layerMap[newId] = layer;
-    }
-
-    //@internal
-    _onChildRendererCreate(e) {
-        e.renderer.clearCanvas = empty;
     }
 
     // _onChildLayerStyleChanged() {
@@ -785,8 +776,6 @@ export default class GroupGLLayer extends maptalks.Layer {
 (GroupGLLayer as any).registerRenderer('gl', Renderer);
 (GroupGLLayer as any).registerRenderer('canvas', null);
 
-function empty() {}
-
 function sortLayersByZIndex(a: maptalks.Layer, b: maptalks.Layer) {
     const c = a.getZIndex() - b.getZIndex();
     if (c === 0) {
@@ -833,9 +822,6 @@ export type GroupGLLayerOptions = {
     single?: boolean,
     onlyWebGL1?: boolean,
     optionalExtensions?: string[],
-    forceRenderOnZooming?: true,
-    forceRenderOnMoving?: true,
-    forceRenderOnRotating?: true,
     viewMoveThreshold?: number,
     geometryEvents?: boolean,
     multiSamples?: number,

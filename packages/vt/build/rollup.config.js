@@ -10,18 +10,11 @@ const pkg = require("../package.json");
 
 const production = process.env.BUILD === "production";
 const outputFile = pkg.main;
-const reserves = ["on", "once", "off", "_drawTiles"];
 const plugins = production
     ? [
           terser({
               module: true,
-              mangle: {
-                  properties: {
-                      regex: /^_/,
-                      keep_quoted: true,
-                      reserved: reserves,
-                  },
-              },
+              mangle: true,
               output: {
                   beautify: true,
                   comments: "/^!/",
@@ -34,13 +27,7 @@ const pluginsWorker = production
     ? [
           terser({
               module: true,
-              mangle: {
-                  properties: {
-                      regex: /^_/,
-                      keep_quoted: true,
-                      reserved: reserves,
-                  },
-              },
+              mangle: true,
               output: {
                   beautify: false,
               },
@@ -154,7 +141,7 @@ module.exports = [
     },
     {
         input: "src/worker/index.js",
-        external: ["maptalks"],
+        external: ["@maptalks/map"],
         plugins: [
             json(),
             nodeResolve({
@@ -184,11 +171,11 @@ module.exports = [
     },
     {
         input: "./build/index.js",
-        external: ["maptalks", "@maptalks/gl"],
+        external: ["@maptalks/map", "@maptalks/gl"],
         output: {
             globals: {
-                maptalks: "maptalks",
-                "@maptalks/gl": "maptalksgl",
+                "@maptalks/map": "maptalks",
+                "@maptalks/gl": "maptalks",
             },
             banner,
             outro,
@@ -217,7 +204,7 @@ module.exports = [
         input: "./build/index.js",
         external: [
             // point-geometry中因为调用了 _开头的方法，所以不能包含在external里，否则会被错误的混淆
-            "maptalks",
+            "@maptalks/map",
             "@maptalks/gl",
             "@mapbox/vector-tile",
             "@maptalks/feature-filter",
@@ -238,8 +225,8 @@ module.exports = [
         ],
         output: {
             globals: {
-                maptalks: "maptalks",
-                "@maptalks/gl": "maptalksgl",
+                "@maptalks/map": "maptalks",
+                "@maptalks/gl": "maptalks",
             },
             banner,
             outro,

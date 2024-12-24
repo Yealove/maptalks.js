@@ -26,7 +26,7 @@ import Layer from '../layer/Layer';
 import Renderable from '../renderer/Renderable';
 import SpatialReference, { type SpatialReferenceType } from './spatial-reference/SpatialReference';
 import { computeDomPosition, MOUSEMOVE_THROTTLE_TIME } from '../core/util/dom';
-import EPSG9807, { type EPSG9807ProjectionType } from '../geo/projection/Projection.EPSG9807.js';
+import EPSG9807, { type EPSG9807ProjectionType } from '../geo/projection/Projection.EPSG9807';
 import { AnimationOptionsType, EasingType } from '../core/Animation';
 import { BBOX, bboxInBBOX, getDefaultBBOX, pointsBBOX } from '../core/util/bbox';
 import { Attribution } from '../control';
@@ -206,7 +206,7 @@ const options: MapOptionsType = {
  *          subdomains:['a','b','c']
  *      }),
  *      layers : [
- *          new maptalks.VectorLayer('v', [new maptalks.Marker([180, 0])])
+ *          new maptalks.PointLayer('v', [new maptalks.Marker([180, 0])])
  *      ]
  * });
  */
@@ -1449,7 +1449,7 @@ export class Map extends Handlerable(Eventable(Renderable(Class))) {
         if (removed.length > 0) {
             const renderer = this.getRenderer();
             if (renderer) {
-                renderer.setLayerCanvasUpdated();
+                renderer.setToRedraw();
             }
             this.once('frameend', () => {
                 removed.forEach(layer => {

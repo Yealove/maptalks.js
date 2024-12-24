@@ -1,4 +1,4 @@
-import * as maptalks from 'maptalks';
+import * as maptalks from '@maptalks/map';
 import { defined } from './common/Util';
 import { createREGL, mat4, vec2, reshader, MaskRendererMixin } from '@maptalks/gl';
 import { intersectsBox } from 'frustum-intersects';
@@ -481,18 +481,6 @@ class GLTFLayerRenderer extends MaskRendererMixin(maptalks.renderer.OverlayLayer
             this.extentShader.dispose();
         }
         super.remove();
-    }
-
-    clearCanvas() {
-        if (!this.canvas) {
-            return;
-        }
-        this.regl.clear({
-            color: [0, 0, 0, 0],
-            depth: 1,
-            stencil : 0
-        });
-        super.clearCanvas();
     }
 
     resizeCanvas(size) {

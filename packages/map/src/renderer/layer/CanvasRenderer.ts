@@ -10,7 +10,7 @@ import Extent from '../../geo/Extent';
 import { imageFetchWorkerKey } from '../../core/worker/CoreWorkers';
 import { registerWorkerAdapter } from '../../core/worker/Worker';
 import { formatResourceUrl } from '../../core/ResourceProxy';
-import { TileRenderingCanvas, TileRenderingContext, ImageType } from '../types';
+import { TileRenderingCanvas, ImageType } from '../types';
 
 const EMPTY_ARRAY = [];
 class ResourceWorkerConnection extends Actor {
@@ -300,7 +300,6 @@ class CanvasRenderer extends Class {
      * Clear canvas
      */
     clear(): void {
-        // this.clearCanvas();
     }
 
     /**
@@ -431,6 +430,7 @@ class CanvasRenderer extends Class {
             const map = this.getMap();
             this.canvas = map.getRenderer().canvas;
             this.context = map.getRenderer().context;
+            this.initContext();
         }
         this.prepareContext();
         delete this._maskExtent;
@@ -465,7 +465,15 @@ class CanvasRenderer extends Class {
         return maskExtent2D;
     }
 
+    initContext() {
+
+    }
+
     prepareContext() {
+
+    }
+
+    clearContext() {
 
     }
 

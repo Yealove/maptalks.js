@@ -1,4 +1,4 @@
-import * as maptalks from '@maptalks/map';
+import * as maptalks from 'maptalks';
 import TerrainWorkerConnection from './TerrainWorkerConnection';
 import * as reshader from '@maptalks/reshader.gl';
 import skinVert from './glsl/terrainSkin.vert';
@@ -1393,9 +1393,6 @@ class TerrainLayerRenderer extends MaskRendererMixin(maptalks.renderer.TileLayer
                     height: tileSize * 2
                 },
                 depth: {
-                    enable: false
-                },
-                stencil: {
                     enable: false
                 },
                 blend: {

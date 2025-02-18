@@ -1,4 +1,4 @@
-import * as maptalks from '@maptalks/map';
+import * as maptalks from 'maptalks';
 import Color from 'color';
 import BasicPainter from './BasicPainter';
 import { reshader } from '@maptalks/gl';
@@ -529,7 +529,6 @@ class LinePainter extends BasicPainter {
                 enable: () => {
                     return this.isEnableTileStencil(context);
                 },
-                mask: 0xff,
                 func: {
                     cmp: () => {
                         return '<=';

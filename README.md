@@ -4,9 +4,9 @@
 
 ## NOTICE
 
-maptalks is [upgrading to maptalks-gl](https://github.com/maptalks/maptalks.js/issues/2471), a webgl (and webgpu in near future) driven 2D/3D map engine.
+maptalks is [upgrading to maptalks-gl](https://github.com/maptalks/maptalks.js/issues/2471), a webgl and webgpu driven 2D/3D map engine.
 
-The [legacy maptalks library](https://github.com/maptalks/maptalks-canvas) will be still maintained.
+If you are looking for the old maptalks source codes, it has moved to [packages/maptalks](https://github.com/maptalks/maptalks.js/tree/master/packages/maptalks) as a submodule.
 
 ## About
 
@@ -129,7 +129,7 @@ or with umd bundle：
 
 ### Map
 
-* `map` home for Map class and other infrustructures.
+* `maptalks` maptalks library source codes.
 
 ### Layers
 * `gl` WebGL base layer functionality, including GroupGLLayer, terrain, post-processing and various 3D mask implementations.
@@ -138,7 +138,6 @@ or with umd bundle：
 * `layer-video` video layer (VideoLayer/VideoSurface) implementation
 
 ### Vector tiles
-* `vector-packer` Parsing of vector tile formats and organization of data structures.
 * `vt-plugin` Interface definition for the vector tile rendering plugin.
 * `vt` Vector tile layer (VectorTileLayer/GeoJSONVectorTileLayer) implementation.
 

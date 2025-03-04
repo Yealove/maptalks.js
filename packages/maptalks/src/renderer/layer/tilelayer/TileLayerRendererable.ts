@@ -13,7 +13,7 @@ import {
 import Browser from '../../../core/Browser';
 import { default as TileLayer } from '../../../layer/tile/TileLayer';
 import WMSTileLayer from '../../../layer/tile/WMSTileLayer';
-import LayerGLRenderer from '../LayerGLRenderer';
+import LayerAbstractRenderer from '../LayerAbstractRenderer';
 import Point from '../../../geo/Point';
 import Extent from '../../../geo/Extent';
 import LRUCache from '../../../core/util/LRUCache';
@@ -62,7 +62,7 @@ class TileWorkerConnection extends Actor {
  * @class
  * @protected
  * @group renderer
- * @extends {renderer.LayerGLRenderer}
+ * @extends {renderer.LayerAbstractRenderer}
  */
 const TileLayerRenderable = function <T extends MixinConstructor>(Base: T) {
     const renderable = class extends Base {
@@ -1204,6 +1204,20 @@ const TileLayerRenderable = function <T extends MixinConstructor>(Base: T) {
                 tile.image.onload = null;
                 tile.image.onerror = null;
             }
+            const layer = this.layer;
+            if (layer) {
+                /**
+                 * tiledelete event, fired when tile is delete.
+                 *
+                 * @event TileLayer#tiledelete
+                 * @type {Object}
+                 * @property {String} type - tiledelete
+                 * @property {TileLayer} target - tile layer
+                 * @property {Object} tileInfo - tile info
+                 * @property {Image} tileImage - tile image
+                 */
+                layer.fire('tiledelete', { tile: tile.info, tileImage: tile.image });
+            }
         }
 
         //@internal
@@ -1313,12 +1327,12 @@ export type TilesInViewType = {
 }
 
 export interface TileGrid {
-    extent:  Extent;
-    count:   number;
-    tiles:   Tile[];
+    extent: Extent;
+    count: number;
+    tiles: Tile[];
     parents: any[];
-    offset:  number[];
-    zoom:    number;
+    offset: number[];
+    zoom: number;
 }
 
 export interface TileGrids {

@@ -4,7 +4,7 @@ import Browser from '../core/Browser';
 import Point from '../geo/Point';
 import ImageGLRenderable from '../renderer/layer/ImageGLRenderable';
 import CanvasRenderer from '../renderer/layer/CanvasRenderer';
-import { ResourceCache } from '../renderer/layer/CanvasRenderer';
+import { ResourceCache } from '../renderer/layer/LayerAbstractRenderer';
 import Extent from '../geo/Extent';
 import Layer, { LayerOptionsType } from './Layer';
 import { PointExtent } from '../geo';
@@ -306,7 +306,8 @@ export class ImageLayerGLRenderer extends ImageGLRenderable(ImageLayerCanvasRend
 
     //@internal
     _drawImage(image: LayerImageType, extent: PointExtent, opacity: number) {
-        this.drawGLImage(image, extent.xmin, extent.ymax, extent.getWidth(), extent.getHeight(), 1, opacity);
+        const width = extent.getWidth();
+        this.drawGLImage(image, extent.xmin, extent.ymax, width, extent.getHeight(), 1, opacity, image.width !== width);
     }
 
     createContext() {

@@ -3,6 +3,8 @@ import BasicPainter from './BasicPainter';
 import { vec2, reshader, mat4 } from '@maptalks/gl';
 import vert from './glsl/fill.vert';
 import frag from './glsl/fill.frag';
+import wgslVert from './wgsl/fill_vert.wgsl';
+import wgslFrag from './wgsl/fill_frag.wgsl';
 import pickingVert from './glsl/fill.picking.vert';
 import { isNumber, isNil, setUniformFromSymbol, createColorSetter, toUint8ColorInGlobalVar, meterToPoint } from '../Util';
 import { prepareFnTypeData } from './util/fn_type_util';
@@ -265,6 +267,7 @@ class FillPainter extends BasicPainter {
         }
 
         mesh.setDefines(defines);
+        mesh.positionMatrix = this.getAltitudeOffsetMatrix();
         mesh.setLocalTransform(transform);
         mesh.properties.symbolIndex = symbolIndex;
         return mesh;
@@ -592,6 +595,7 @@ class FillPainter extends BasicPainter {
 
         if (this.pickingFBO) {
             const projViewModelMatrix = [];
+            const isVectorTile = this.layer instanceof maptalks.TileLayer;
             this.picking = [new reshader.FBORayPicking(
                 this.renderer,
                 {
@@ -606,7 +610,10 @@ class FillPainter extends BasicPainter {
                             }
                         }
                     ],
-                    extraCommandProps
+                    extraCommandProps,
+                    enableStencil: () => {
+                        return isVectorTile && this.isOnly2D();
+                    }
                 },
                 this.pickingFBO,
                 this.getMap()
@@ -632,6 +639,7 @@ class FillPainter extends BasicPainter {
 
         this.shader = new reshader.MeshShader({
             vert, frag,
+            wgslVert, wgslFrag,
             uniforms,
             defines,
             extraCommandProps

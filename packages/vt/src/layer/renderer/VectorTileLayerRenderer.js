@@ -10,12 +10,15 @@ import { isFunctionDefinition } from '@maptalks/function-type';
 import { meterToPoint } from '../plugins/Util';
 import { getVectorPacker } from '../../packer/inject';
 
+const { TileLayerRendererable, LayerAbstractRenderer } = maptalks.renderer;
+
 const { FilterUtil } = getVectorPacker();
 
 // const DEFAULT_PLUGIN_ORDERS = ['native-point', 'native-line', 'fill'];
 const EMPTY_ARRAY = [];
 const CLEAR_COLOR = [0, 0, 0, 0];
 const TILE_POINT = new maptalks.Point(0, 0);
+const MINMAX = [];
 
 const TERRAIN_CLEAR = {
     color: CLEAR_COLOR,
@@ -31,7 +34,7 @@ const terrainVectorFilter = plugin => {
     return plugin.isTerrainVector();
 }
 
-class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer {
+class VectorTileLayerRenderer extends TileLayerRendererable(LayerAbstractRenderer) {
 
     supportRenderMode() {
         return true;
@@ -45,6 +48,7 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
         this._requestingMVT = {};
         this._plugins = {};
         this._featurePlugins = {};
+        this.init();
     }
 
     getTileLevelValue(tileInfo, currentTileZoom) {
@@ -249,19 +253,20 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
     }
 
     initContext() {
-        const { regl, reglGL } = this.context;
+        super.initContext();
+        const { regl, device, reglGL } = this.context;
+        const graphics = regl || device;
         this.regl = regl;
         this.gl = reglGL;
-        this.canvas.pickingFBO = this.canvas.pickingFBO || this.regl.framebuffer(this.canvas.width, this.canvas.height);
-        this.pickingFBO = this.canvas.pickingFBO || this.regl.framebuffer(this.canvas.width, this.canvas.height);
-        this._debugPainter = new DebugPainter(this.regl, this.getMap());
-        this._prepareWorker();
-        this._groundPainter = new GroundPainter(this.regl, this.layer);
+        this.device = device;
 
-        if (!this.consumeTile) {
-            const version = this.getMap().VERSION;
-            throw new Error(`Incompatible version of maptalks: ${version}, upgrade maptalks >= v1.0.0-rc.14`);
-        }
+
+        this.canvas.pickingFBO = this.canvas.pickingFBO || graphics.framebuffer(this.canvas.width, this.canvas.height);
+        this.pickingFBO = this.canvas.pickingFBO || graphics.framebuffer(this.canvas.width, this.canvas.height);
+        this._debugPainter = new DebugPainter(graphics, this.getMap());
+        this._prepareWorker();
+        this._groundPainter = new GroundPainter(graphics, this.layer);
+        this.layer.fire('contextcreate', { regl, device });
     }
 
     _createREGLContext(canvas) {
@@ -550,7 +555,7 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
                     x: tileInfo.x,
                     y: tileInfo.y,
                     z: tileInfo.z,
-                    url: tileInfo.url,
+                    url: getTileAbsoluteUrl(tileInfo),
                     id: tileInfo.id,
                     extent2d: tileInfo.extent2d,
                 },
@@ -568,7 +573,7 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
             }
             //user custom ,data can from indexedDB
             if (this.loadTileArrayBuffer && isFunction(this.loadTileArrayBuffer)) {
-                this.loadTileArrayBuffer(tileInfo.url, tileInfo, (err, data) => {
+                this.loadTileArrayBuffer(loadTileOpitons.tileInfo.url, tileInfo, (err, data) => {
                     //fail
                     if (err) {
                         this._onReceiveMVTData(url, err)
@@ -917,7 +922,7 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
     }
 
     _startFrame(timestamp, filter) {
-        const isRenderingTerrain = !!this._terrainLayer;
+        const isRenderingTerrain = this._isRenderingTerrain();
         const useDefault = this.layer.isDefaultRender() && this._layerPlugins;
         const parentContext = this._parentContext;
         const plugins = this._getAllPlugins();
@@ -957,7 +962,7 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
         const cameraPosition = this.getMap().cameraPosition;
         const plugins = this._getAllPlugins();
         // terrain skin的相关数据已经在renderTerrainSkin中绘制，这里就不再绘制
-        const isRenderingTerrain = !!this._terrainLayer;
+        const isRenderingTerrain = this._isRenderingTerrain();
         const isFinalRender = !parentContext.timestamp || parentContext.isFinalRender;
 
         // maptalks/issues#202, finalRender后不再更新collision，以免后处理（如bloom）阶段继续更新collision造成bug
@@ -1089,7 +1094,7 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
     }
 
     _getPluginContext(plugin, polygonOffsetIndex, cameraPosition, timestamp) {
-        const isRenderingTerrain = !!this._terrainLayer;
+        const isRenderingTerrain = this._isRenderingTerrain();
         const isRenderingTerrainSkin = isRenderingTerrain && plugin && terrainSkinFilter(plugin);
         const regl = this.regl;
         const gl = this.gl;
@@ -1338,7 +1343,7 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
 
     drawTile(tileInfo, tileData, filter) {
         if (!tileData.cache) return;
-        const isRenderingTerrain = !!this._terrainLayer;
+        const isRenderingTerrain = this._isRenderingTerrain();
         const tileCache = tileData.cache;
         const tilePoint = TILE_POINT.set(tileInfo.extent2d.xmin, tileInfo.extent2d.ymax);
         const extent = tileInfo.extent || this._receivedTileExtent || 8192;
@@ -1401,7 +1406,6 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
         if (tileData && tileData.style === this._styleCounter) {
             this._retirePrevTile(tileInfo);
         }
-        this.setCanvasUpdated();
     }
 
     _createOneTile(tileInfo, tileData) {
@@ -1411,7 +1415,7 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
         if (!tileCache) {
             tileCache = tileData.cache = {};
         }
-        const isRenderingTerrain = !!this._terrainLayer;
+        const isRenderingTerrain = this._isRenderingTerrain();
         const tilePoint = TILE_POINT.set(tileInfo.extent2d.xmin, tileInfo.extent2d.ymax);
         const tileTransform = tileInfo.transform = tileInfo.transform || this.calculateTileMatrix(tilePoint, tileInfo.z, tileData.extent);
         const tileTranslationMatrix = tileInfo.tileTranslationMatrix = tileInfo.tileTranslationMatrix || this.calculateTileTranslationMatrix(tilePoint, tileInfo.z);
@@ -1525,14 +1529,15 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
     }
 
     abortTileLoading(tileImage, tileInfo) {
+        const tileUrl = tileInfo ? getTileAbsoluteUrl(tileInfo) : '';
         if (tileInfo && tileInfo.url) {
             if (this._workerConn) {
-                this._workerConn.abortTile(tileInfo.url);
+                this._workerConn.abortTile(tileUrl);
             }
             delete this._requestingMVT[tileInfo.url];
         }
         if (this.loadTileArrayBuffer && isFunction(this.loadTileArrayBuffer)) {
-            this.loadTileArrayBuffer(tileInfo.url, tileInfo, () => {
+            this.loadTileArrayBuffer(tileUrl, tileInfo, () => {
 
             }, {
                 command: 'abortTile'
@@ -1882,6 +1887,11 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
     }
 
     consumeTile(tileImage, tileInfo) {
+        if (tileImage && !tileImage._empty) {
+            const [minAltitude, maxAltitude] = this._findTileAltitude(tileImage);
+            tileInfo.minAltitude = minAltitude;
+            tileInfo.maxAltitude = maxAltitude;
+        }
         this._retirePrevTile(tileInfo);
         super.consumeTile(tileImage, tileInfo);
         if (this.layer.options.features === 'transient' && tileImage.data) {
@@ -1911,6 +1921,37 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
             tileImage.features = [];
         }
         this._createOneTile(tileInfo, tileImage);
+    }
+
+    _findTileAltitude(tileImage) {
+        const data = tileImage.data;
+        let max = -Infinity;
+        let min = Infinity;
+        for (let i = 0; i < data.length; i++) {
+            if (!data[i]) {
+                continue;
+            }
+            const packs = data[i].data;
+            if (!packs) {
+                continue;
+            }
+            for (let ii = 0; ii < packs.length; ii++) {
+                const pack = packs[ii];
+                if (!pack || !pack.properties) {
+                    continue;
+                }
+                const { maxAltitude, minAltitude } = pack.properties;
+                if (maxAltitude > max) {
+                    max = maxAltitude;
+                }
+                if (minAltitude < min) {
+                    min = minAltitude;
+                }
+            }
+        }
+        MINMAX[0] = min === Infinity ? 0 : min;
+        MINMAX[1] = max === -Infinity ? 0 : max;
+        return MINMAX;
     }
 
     onTileError(tileImage, tileInfo) {
@@ -1987,6 +2028,10 @@ class VectorTileLayerRenderer extends maptalks.renderer.TileLayerCanvasRenderer 
     _getLayerOpacity() {
         const layerOpacity = this.layer.options['opacity'];
         return (isNil(layerOpacity) ? 1 : layerOpacity);
+    }
+
+    _isRenderingTerrain() {
+        return !!this._terrainLayer && this.layer.options['awareOfTerrain'];
     }
 }
 
@@ -2186,4 +2231,8 @@ function findFeatures(image) {
 
     }
     return [];
+}
+
+function getTileAbsoluteUrl(tile) {
+    return maptalks.Util.getAbsoluteURL(tile.url);
 }

@@ -137,6 +137,8 @@ export default class Geometry {
     _tempPosArray?: NumberArray
     //@internal
     _disposed?: boolean
+    //@internal
+    _isIndexed?: boolean
 
     constructor(data: AttributeData, elements, count?: number, desc?: GeometryDesc) {
         this._version = 0;
@@ -162,6 +164,7 @@ export default class Geometry {
         if (!this.elements) {
             this.elements = count;
         }
+        this._isIndexed = !isNumber(this.elements);
         this.properties = {};
         this._buffers = {};
         this._vao = {};
@@ -398,7 +401,7 @@ export default class Geometry {
                 continue;
             }
             if (Array.isArray(data[key])) {
-                data[key] = new Float32Array(data[key]);
+                data[key] = new Float32Array(data[key] as number[]);
             } else if (isWebGPU && isArray(data[key])) {
                 data[key] = Geometry.padGPUBufferAlignment(data[key] as TypedArray, vertexCount);
             }
@@ -666,8 +669,12 @@ export default class Geometry {
             this.elements = elements;
         }
         this._markVAODirty(true);
-
+        this._isIndexed = !isNumber(elements);
         return this;
+    }
+
+    isIndexedElements() {
+        return this._isIndexed;
     }
 
     deleteElements() {

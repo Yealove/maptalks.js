@@ -14,11 +14,11 @@ export function toGPUCompareFunction(func): GPUCompareFunction {
 }
 
 const TOPOLOGY_DICTIONARY = {
-    'points': 'point-list',
+    // 'points': 'point-list',
     'triangles': 'triangle-list',
     'triangle strip': 'triangle-strip',
     'lines': 'line-list',
-    'line strip': 'line-strip'
+    // 'line strip': 'line-strip'
 };
 export function toTopology(primitive): GPUPrimitiveTopology {
     return TOPOLOGY_DICTIONARY[primitive] || 'triangle-list';
@@ -81,7 +81,7 @@ export function toTextureFormat(format: string, type: string): GPUTexFormat {
     format = format || 'rgba';
     type = type || 'uint8';
 
-    if (format === 'depth stencil') {
+    if (format === 'depth stencil' || format === 'depth24 stencil8') {
         return { format: 'depth24plus-stencil8', bytesPerTexel: 4, isDepthStencil: true};
     } else if (format === 'depth') {
         return { format: 'depth24plus', bytesPerTexel: 4, isDepthStencil: false };

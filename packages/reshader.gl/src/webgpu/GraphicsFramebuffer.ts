@@ -41,15 +41,39 @@ export default class GraphicsFramebuffer {
     }
 
     resize(width, height) {
-        //TODO implement GraphicsFramebuffer resize
+        if (this.colorTexture && width === this.colorTexture.width && height === this.colorTexture.height) {
+            return;
+        }
+        this.options.width = width;
+        this.options.height = height;
+        if (this.colorTexture) {
+            this.colorTexture.resize(width, height);
+        }
+        if (this.depthTexture) {
+            this.depthTexture.resize(width, height);
+        }
+        if (this._renderPass) {
+            const colorAttachment = this._renderPass.colorAttachments[0];
+            if (colorAttachment && colorAttachment.view && this.colorTexture) {
+                colorAttachment.view = this.colorTexture.getView();
+            }
+            const depthAttchment = this._renderPass.depthStencilAttachment;
+            if (depthAttchment && depthAttchment.view && this.depthTexture) {
+                depthAttchment.view = this.depthTexture.getView();
+            }
+        }
     }
 
     _update() {
         let color = this.options.colors && this.options.colors[0] || this.options.color;
+        let colorFormat = this.options.colorFormat;
+        let colorType = this.options.colorType;
         let width, height;
         if (color) {
             width = color.width;
             height = color.height;
+        } else if (colorFormat || colorType) {
+            color = true;
         }
         if (!isNil(this.options.width)) {
             width = this.options.width;
@@ -65,6 +89,18 @@ export default class GraphicsFramebuffer {
                     width,
                     height
                 };
+            }
+            if (!color.width) {
+                color.width = width;
+            }
+            if (!color.height) {
+                color.height = height;
+            }
+            if (!color.format) {
+                color.format = colorFormat || 'rgba';
+            }
+            if (!color.type) {
+                color.type = colorType || 'uint8';
             }
             this._ownColor = true;
             color = new GraphicsTexture(this.device, color);
@@ -129,9 +165,13 @@ export default class GraphicsFramebuffer {
     getRenderPassDescriptor() {
         const colorAttachment = this._renderPass.colorAttachments[0];
         const depthStencilAttachment = this._renderPass.depthStencilAttachment;
+        let width, height;
         if (!this.colorTexture) {
             // a default texture view
-            colorAttachment.view = this.device.context.getCurrentTexture().createView();
+            const colorTexture = this.device.context.getCurrentTexture();
+            width = colorTexture.width;
+            height = colorTexture.height;
+            colorAttachment.view = colorTexture.createView();
             colorAttachment.view.label = 'default canvas view';
         }
         if (colorAttachment) {
@@ -141,11 +181,16 @@ export default class GraphicsFramebuffer {
         if (depthStencilAttachment) {
             depthStencilAttachment.depthLoadOp = this.depthLoadOp || 'load';
             depthStencilAttachment.depthClearValue = this.depthClearValue || 1;
-            if (this.depthTexture.gpuFormat.isDepthStencil) {
+            const depthTexture = this.depthTexture;
+            if (depthTexture.gpuFormat.isDepthStencil) {
                 depthStencilAttachment.stencilLoadOp = this.stencilLoadOp || 'load';
                 depthStencilAttachment.stencilClearValue = this.stencilClearValue || 0;
             }
-
+            if (depthTexture && width && height && (depthTexture.width !== width || depthTexture.height !== height)) {
+                // depth texture size may be not consistent with canvas
+                depthTexture.resize(width, height);
+                depthStencilAttachment.view = depthTexture.getView();
+            }
         }
         this._resetClearOptions();
         return this._renderPass;

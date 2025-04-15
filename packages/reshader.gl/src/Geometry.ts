@@ -7,7 +7,7 @@ import { getGLTFLoaderBundle } from './common/GLTFBundle'
 import { ActiveAttributes, AttributeData, GeometryDesc, NumberArray, TypedArray } from './types/typings';
 import REGL from '@maptalks/regl';
 import { flatten } from 'earcut';
-import { getGPUVertexType, getFormatFromGLTFAccessor, getItemBytesFromGLTFAccessor } from './webgpu/common/Types';
+import { getGPUVertexType, getFormatFromGLTFAccessor, getBytesPerElementFromGLTFAccessor } from './webgpu/common/Types';
 import { roundUp } from './webgpu/common/math';
 
 const EMPTY_VAO_BUFFER = [];
@@ -94,10 +94,10 @@ export default class Geometry {
         }
         let ctor = array.constructor as any;
         const itemSize = array.length / vertexCount;
-        const bytesPerEle = itemBytes / itemSize;
+        const bytesPerElement = itemBytes / itemSize;
         // 无法对齐时，itemSize 一定是1或者3，补位成2或者4就能对齐了
 
-        const newItemSize = itemSize + (4 - (itemBytes % 4)) / bytesPerEle;
+        const newItemSize = ensureAlignment(itemSize, bytesPerElement);;
         const newArray = new ctor(newItemSize * vertexCount);
         for (let i = 0; i < vertexCount; i++) {
             for (let ii = 0; ii < itemSize; ii++) {
@@ -1083,10 +1083,20 @@ export default class Geometry {
     }
 
     getBufferDescriptor(vertexInfo) {
+        const attrInfos = [];
+        for (const p in vertexInfo) {
+            const info = vertexInfo[p];
+            attrInfos[info.location] = info;
+        }
         const data = this.data;
         const bufferDesc = [];
         const bufferMapping = {};
-        for (const p in data) {
+        // bufferDesc的顺序需要和wgsl中的location对应
+        for (let i = 0; i < attrInfos.length; i++) {
+            if (!attrInfos[i]) {
+                continue;
+            }
+            const p = attrInfos[i].geoAttrName;
             const attr = data[p];
             if (!attr) {
                 continue;
@@ -1098,7 +1108,6 @@ export default class Geometry {
             }
             const accessorName = attr.accessorName;
             const byteStride = attr.byteStride;
-            let stridePadding = 0;
             if (byteStride && accessorName) {
                 // a GLTF accessor style attribute
                 const format = getFormatFromGLTFAccessor(attr.componentType, attr.itemSize);
@@ -1121,11 +1130,11 @@ export default class Geometry {
                         ]
                     }
                     bufferMapping[accessorName] = desc;
-                    bufferDesc.push(desc);
+                    bufferDesc[i] = desc;
                 }
             } else {
                 const desc = getAttrBufferDescriptor(attr, info);
-                bufferDesc.push(desc);
+                bufferDesc[i] = desc;
             }
         }
         return bufferDesc;
@@ -1169,11 +1178,14 @@ function getTypeCtor(arr: NumberArray, byteWidth: number) {
 
 export function getAttrBufferDescriptor(attr, info): GPUVertexBufferLayout {
     const array = attr.data || attr.array || attr;
+    let itemSize = info.itemSize;
+
     if (attr.buffer && !isArray(attr)) {
-        const itemBytes = attr.buffer.itemBytes;
-        const format = getItemFormat(attr, info.itemSize);
+        const bytesPerElement = attr.buffer.bytesPerElement;
+        itemSize = ensureAlignment(itemSize, bytesPerElement);
+        const format = getItemFormat(attr, itemSize);
         return {
-            arrayStride: info.itemSize * itemBytes,
+            arrayStride: itemSize * bytesPerElement,
             attributes: [
                 {
                     shaderLocation: info.location,
@@ -1183,16 +1195,17 @@ export function getAttrBufferDescriptor(attr, info): GPUVertexBufferLayout {
             ]
         };
     } else if (isArray(array)) {
-        let format, itemBytes;
+        let format, bytesPerElement;
         if (attr.componentType) {
             format = getFormatFromGLTFAccessor(attr.componentType, attr.itemSize);
-            itemBytes = getItemBytesFromGLTFAccessor(attr.componentType);
+            bytesPerElement = getBytesPerElementFromGLTFAccessor(attr.componentType);
         } else {
-            format = getItemFormat(array, info.itemSize);
-            itemBytes = getItemBytes(array);
+            format = getItemFormat(array, itemSize);
+            bytesPerElement = getBytesPerElement(array);
         }
+        itemSize = ensureAlignment(itemSize, bytesPerElement);
         return {
-            arrayStride: info.itemSize * itemBytes,
+            arrayStride: itemSize * bytesPerElement,
             attributes: [
                 {
                     shaderLocation: info.location,
@@ -1204,10 +1217,10 @@ export function getAttrBufferDescriptor(attr, info): GPUVertexBufferLayout {
     }
 }
 
-function getItemBytes(data) {
+function getBytesPerElement(data) {
     const array = getAttrArray(data);
     if (array.destroy) {
-        return array.itemBytes;
+        return array.bytesPerElement;
     }
     if (array.BYTES_PER_ELEMENT) {
         return array.BYTES_PER_ELEMENT;
@@ -1258,8 +1271,8 @@ function createGPUBuffer(device, data, usage, label) {
     new ctor(buffer.getMappedRange()).set(data);
     buffer.unmap();
     buffer.itemCount = data.length;
-    buffer.itemBytes = getItemBytes(data);
     buffer.itemType = getGPUVertexType(data); // uint8, sint8, uint16, sint16, uint32, sint32, float32
+    buffer.bytesPerElement = getBytesPerElement(data);
     return buffer;
 }
 function findElementConstructor(data: number[]): any {
@@ -1276,3 +1289,11 @@ function getIndexArrayType(max) {
     if (max < 65536) return Uint16Array;
     return Uint32Array;
 }
+function ensureAlignment(itemSize: number, bytesPerElement: number): any {
+    const itemBytes = itemSize * bytesPerElement;
+    if (itemBytes % 4 === 0) {
+        return itemSize;
+    }
+    return itemSize + (4 - (itemBytes % 4)) / bytesPerElement;
+}
+

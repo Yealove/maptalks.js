@@ -40,7 +40,7 @@ export type FunctionTypeColor_Interpolate = {
 
 export type SymbolBooleanType = boolean | FunctionTypeIdentity | FunctionTypeInterval | FunctionTypeCategorical;
 export type SymbolNumberType = number | FunctionTypeExponential | FunctionTypeIdentity | FunctionTypeInterval | FunctionTypeCategorical;
-export type SymbolColorType = string | Array<number> | FunctionTypeColor_Interpolate;
+export type SymbolColorType = string | Array<number> | FunctionTypeColor_Interpolate | FunctionTypeIdentity | FunctionTypeInterval | FunctionTypeCategorical;
 
 
 
@@ -61,7 +61,7 @@ export type MarkerCommonSymbol = {
     markerDy?: SymbolNumberType;
     markerHorizontalAlignment?: 'left' | 'middle' | 'right';
     markerVerticalAlignment?: 'top' | 'middle' | 'bottom';
-    markerPlacement?: 'point' | 'vertex' | 'line' | 'vertex-first' | 'vertex-last';
+    markerPlacement?: 'center' | 'point' | 'vertex' | 'line' | 'vertex-first' | 'vertex-last' | 'vertex-firstlast';
     markerRotation?: number;
 }
 

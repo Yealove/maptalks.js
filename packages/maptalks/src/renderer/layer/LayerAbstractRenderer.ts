@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
-import { now, isNil, isArrayHasData, isSVG, IS_NODE, loadImage, hasOwn, getImageBitMap, isImageBitMap } from '../../core/util';
+import { now, isNil, isArrayHasData, isSVG, IS_NODE, loadImage, getImageBitMap, isImageBitMap } from '../../core/util';
 import Class from '../../core/Class';
 import Browser from '../../core/Browser';
 import Canvas2D from '../../core/Canvas';
@@ -11,6 +11,7 @@ import { imageFetchWorkerKey } from '../../core/worker/CoreWorkers';
 import { registerWorkerAdapter } from '../../core/worker/Worker';
 import { formatResourceUrl } from '../../core/ResourceProxy';
 import { TileRenderingCanvas, ImageType } from '../types';
+import { getResouceCacheInstance, ResourceCache } from '../../core/ResourceCacheManager';
 
 const EMPTY_ARRAY = [];
 class ResourceWorkerConnection extends Actor {
@@ -70,6 +71,7 @@ class LayerAbstractRenderer extends Class {
     _errorThrown: boolean;
     //@internal
     __zoomTransformMatrix: number[];
+    mapDPR?: number;
 
     drawOnInteracting?(...args: any[]): void;
     checkResources?(): any[];
@@ -102,7 +104,7 @@ class LayerAbstractRenderer extends Class {
         }
         if (!this.resources) {
             /* eslint-disable no-use-before-define */
-            this.resources = new ResourceCache();
+            this.resources = getResouceCacheInstance();
             /* eslint-enable no-use-before-define */
         }
         this.checkAndDraw(this._tryToDraw, framestamp);
@@ -333,6 +335,29 @@ class LayerAbstractRenderer extends Class {
     }
 
     /**
+     * 渲染结果区域截图,主要用于事件检测处理
+     * @param x 
+     * @param y 
+     * @param width 
+     * @param height 
+     * @returns 
+     */
+    screenshotRenderResult(x: number, y: number, width: number, height: number): CanvasRenderingContext2D | null {
+        if (this.canvas) {
+            const tempCanvas = Canvas2D.getTempCanvas();
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            //open willReadFrequently for getImageData Performance
+            const context = Canvas2D.getCanvas2DContext(tempCanvas);
+            context.clearRect(0, 0, width, height);
+            context.drawImage(this.canvas, x, y, width, height, 0, 0, width, height);
+            return context;
+        } else {
+            console.warn('not find layer canvas for screenshotRenderResult,the layerId:', this.layer.getId());
+        }
+    }
+
+    /**
      * Detect if there is anything painted on the given point
      * @param point containerPoint
      */
@@ -341,22 +366,25 @@ class LayerAbstractRenderer extends Class {
             return false;
         }
         const map = this.getMap();
-        const r = map.getDevicePixelRatio();
+        const r = this.mapDPR || map.getDevicePixelRatio();
         const size = map.getSize();
         if (point.x < 0 || point.x > size['width'] * r || point.y < 0 || point.y > size['height'] * r) {
             return false;
         }
+        const x = Math.round(r * point.x), y = Math.round(r * point.y);
         const imageData = this.getImageData && this.getImageData();
         if (imageData) {
-            const x = Math.round(r * point.x), y = Math.round(r * point.y);
             const idx = y * imageData.width * 4 + x * 4;
             //索引下标从0开始需要-1
             return imageData.data[idx + 3] > 0;
         }
         try {
-            const imgData = this.context.getImageData(r * point.x, r * point.y, 1, 1).data;
-            if (imgData[3] > 0) {
-                return true;
+            const ctx = this.screenshotRenderResult(x, y, 2, 2);
+            if (ctx) {
+                const imgData = ctx.getImageData(x, y, 1, 1).data;
+                if (imgData[3] > 0) {
+                    return true;
+                }
             }
         } catch (error) {
             if (!this._errorThrown) {
@@ -390,10 +418,17 @@ class LayerAbstractRenderer extends Class {
             const cache = {};
             for (let i = resourceUrls.length - 1; i >= 0; i--) {
                 const url = resourceUrls[i];
-                if (!url || !url.length || cache[url.join('-')]) {
+                if (!url || !url.length) {
                     continue;
                 }
-                cache[url.join('-')] = 1;
+                const key = url.join('-');
+                //Exclude ImageBitmap
+                if (!isImageBitMap(url[0])) {
+                    if (cache[key]) {
+                        continue;
+                    }
+                    cache[key] = 1;
+                }
                 if (!resources.isResourceLoaded(url, true)) {
                     //closure it to preserve url's value
                     promises.push(new Promise(this._promiseResource(url)));
@@ -634,12 +669,16 @@ class LayerAbstractRenderer extends Class {
 
     //@internal
     _drawAndRecord(framestamp: number) {
-        if (!this.getMap()) {
+        const map = this.getMap();
+        if (!map) {
             return;
         }
         const painted = this._painted;
         this._painted = true;
         let t = now();
+
+        this.mapDPR = map.getDevicePixelRatio();
+
         this.draw(framestamp);
         t = now() - t;
         //reduce some time in the first draw
@@ -746,133 +785,11 @@ class LayerAbstractRenderer extends Class {
         }
         this.resources.addResource(url, img);
     }
+
 }
 
 export default LayerAbstractRenderer;
 
-export type ResourceUrl = string | string[]
-
-export class ResourceCache {
-    resources: any;
-
-    //@internal
-    _errors: any;
-
-    constructor() {
-        this.resources = {};
-        this._errors = {};
-    }
-
-    addResource(url: [string, number | string, number | string], img) {
-        this.resources[url[0]] = {
-            image: img,
-            width: +url[1],
-            height: +url[2],
-            refCnt: 0
-        };
-        if (img && img.width && img.height && !img.close && Browser.imageBitMap && !Browser.safari && !Browser.iosWeixin) {
-            if (img.src && isSVG(img.src)) {
-                return;
-            }
-            createImageBitmap(img).then(imageBitmap => {
-                if (!this.resources[url[0]]) {
-                    //removed
-                    return;
-                }
-                this.resources[url[0]].image = imageBitmap;
-            });
-        }
-    }
-
-    isResourceLoaded(url: ResourceUrl, checkSVG?: boolean) {
-        if (!url) {
-            return false;
-        }
-        const imgUrl = this._getImgUrl(url);
-        if (this._errors[imgUrl]) {
-            return true;
-        }
-        const img = this.resources[imgUrl];
-        if (!img) {
-            return false;
-        }
-        if (checkSVG && isSVG(url[0]) && (+url[1] > img.width || +url[2] > img.height)) {
-            return false;
-        }
-        return true;
-    }
-
-    login(url: string) {
-        const res = this.resources[url];
-        if (res) {
-            res.refCnt++;
-        }
-    }
-
-    logout(url: string) {
-        const res = this.resources[url];
-        if (res && res.refCnt-- <= 0) {
-            if (res.image && res.image.close) {
-                res.image.close();
-            }
-            delete this.resources[url];
-        }
-    }
-
-    getImage(url: ResourceUrl) {
-        const imgUrl = this._getImgUrl(url);
-        if (!this.isResourceLoaded(url) || this._errors[imgUrl]) {
-            return null;
-        }
-        return this.resources[imgUrl].image;
-    }
-
-    markErrorResource(url: ResourceUrl) {
-        this._errors[this._getImgUrl(url)] = 1;
-    }
-
-    merge(res: any) {
-        if (!res) {
-            return this;
-        }
-        for (const p in res.resources) {
-            const img = res.resources[p];
-            this.addResource([p, img.width, img.height], img.image);
-        }
-        return this;
-    }
-
-    forEach(fn: Function) {
-        if (!this.resources) {
-            return this;
-        }
-        for (const p in this.resources) {
-            if (hasOwn(this.resources, p)) {
-                fn(p, this.resources[p]);
-            }
-        }
-        return this;
-    }
-
-    //@internal
-    _getImgUrl(url: ResourceUrl) {
-        if (!Array.isArray(url)) {
-            return url;
-        }
-        return url[0];
-    }
-
-    remove() {
-        for (const p in this.resources) {
-            const res = this.resources[p];
-            if (res && res.image && res.image.close) {
-                // close bitmap
-                res.image.close();
-            }
-        }
-        this.resources = {};
-    }
-}
 
 const workerSource = `
 function (exports) {

@@ -138,7 +138,8 @@ class CanvasRenderer extends LayerAbstractRenderer {
         if (this.gl && this.gl.canvas === this.canvas || this.context) {
             return;
         }
-        this.context = Canvas2D.getCanvas2DContext(this.canvas);
+        //disable willReadFrequently for render performance.Performance improved by 200 times
+        this.context = Canvas2D.getCanvas2DPerformanceContext(this.canvas);
         if (!this.context) {
             return;
         }
@@ -169,8 +170,9 @@ class CanvasRenderer extends LayerAbstractRenderer {
         if (!canvas) {
             return;
         }
-        const size = canvasSize || this.getMap().getSize();
-        const r = this.getMap().getDevicePixelRatio();
+        const map = this.getMap();
+        const size = canvasSize || map.getSize();
+        const r = map.getDevicePixelRatio();
         const { width, height, cssWidth, cssHeight } = calCanvasSize(size, r);
         // width/height不变并不意味着 css width/height 不变
         if (this.layer._canvas && (canvas.style.width !== cssWidth || canvas.style.height !== cssHeight)) {
@@ -196,11 +198,15 @@ class CanvasRenderer extends LayerAbstractRenderer {
      * Clear the canvas to blank
      */
     clearCanvas(): void {
-        if (!this.context || !this.getMap()) {
+        if (!this.context) {
+            return;
+        }
+        const map = this.getMap();
+        if (!map) {
             return;
         }
         //fix #1597
-        const r = this.getMap().getDevicePixelRatio();
+        const r = this.mapDPR || map.getDevicePixelRatio();
         const rScale = 1 / r;
         const w = this.canvas.width * rScale, h = this.canvas.height * rScale;
         Canvas2D.clearRect(this.context, 0, 0, Math.max(w, this.canvas.width), Math.max(h, this.canvas.height));
@@ -287,7 +293,7 @@ class CanvasRenderer extends LayerAbstractRenderer {
         //geometry 渲染逻辑里会修改globalAlpha，这里保存一下
         const alpha = context.globalAlpha;
         context.save();
-        const dpr = map.getDevicePixelRatio();
+        const dpr = this.mapDPR || map.getDevicePixelRatio();
         if (dpr !== 1) {
             context.save();
             this._canvasContextScale(context, dpr);
@@ -357,6 +363,7 @@ class CanvasRenderer extends LayerAbstractRenderer {
         this.resizeCanvas();
         this.setToRedraw();
     }
+
 
 }
 

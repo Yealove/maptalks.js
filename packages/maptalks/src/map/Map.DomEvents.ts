@@ -404,7 +404,7 @@ Map.include(/** @lends Map.prototype */ {
 
     //@internal
     _wrapTerrainData(eventParam: MapEventDataType) {
-        if (eventParam.containerPoint && !eventParam.terrain) {
+        if (this.options['queryTerrainInMapEvents'] && eventParam.containerPoint && !eventParam.terrain) {
             eventParam.terrain = this._queryTerrainInfo(eventParam.containerPoint);
         }
     },
@@ -513,6 +513,10 @@ Map.include(/** @lends Map.prototype */ {
 });
 
 Map.addOnLoadHook('_registerDomEvents');
+
+Map.mergeOptions({
+    'queryTerrainInMapEvents': true
+});
 
 function isRotatingMap(map) {
     if (!map._domMouseDownView) {

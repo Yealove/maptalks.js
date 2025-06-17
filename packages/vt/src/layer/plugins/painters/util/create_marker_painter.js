@@ -5,6 +5,7 @@ import { DEFAULT_MARKER_WIDTH, DEFAULT_MARKER_HEIGHT, GLYPH_SIZE, DEFAULT_ICON_A
 import { createAtlasTexture, getDefaultMarkerSize } from './atlas_util';
 import { prepareFnTypeData, PREFIX, isFnTypeSymbol } from './fn_type_util';
 import { prepareTextGeometry, initTextUniforms, initTextMeshDefines } from './create_text_painter';
+import { limitMarkerDefinesByDevice } from './limit_defines';
 // import { getIconBox } from './get_icon_box';
 
 export const BOX_ELEMENT_COUNT = 6;
@@ -54,7 +55,13 @@ export function createMarkerMesh(
         }
 
         geometry.properties.aAnchor = aPosition;
-        geometry.properties.aShape = aShape;
+        const length = aShape.length / 4;
+        const aShapeData = new aShape.constructor(length * 2);
+        for (let i = 0; i < length; i++) {
+            aShapeData[i * 2] = aShape[i * 4];
+            aShapeData[i * 2 + 1] = aShape[i * 4 + 1];
+        }
+        geometry.properties.aShape = aShapeData;
     }
     if (!geometry.properties.visElemts) {
         //保存elements，隐藏icon时，从elements中删除icon的索引数据
@@ -102,7 +109,7 @@ export function createMarkerMesh(
 
     const material = new reshader.Material(uniforms);
     const mesh = new reshader.Mesh(geometry, material, meshConfig);
-    const defines = {
+    let defines = {
         'HAS_HALO_ATTR': 1
     };
     if (enableCollision) {
@@ -118,6 +125,7 @@ export function createMarkerMesh(
     if (hasText) {
         initTextMeshDefines.call(this, defines, mesh);
     }
+    defines = limitMarkerDefinesByDevice(regl, defines);
     mesh.setDefines(defines);
     mesh.setUniform('alphaTest', DEFAULT_ICON_ALPHA_TEST);
     mesh.setLocalTransform(transform);
@@ -184,6 +192,9 @@ function setMeshUniforms(uniforms, regl, geometry, symbol) {
 }
 
 function initMeshDefines(geometry, defines) {
+    if (geometry.data.aAltitude) {
+        defines['HAS_ALTITUDE'] = 1;
+    }
     if (geometry.data.aMarkerWidth) {
         defines['HAS_MARKER_WIDTH'] = 1;
     }
@@ -226,9 +237,6 @@ function initMeshDefines(geometry, defines) {
     }
     if (geometry.data.aPadOffset) {
         defines['HAS_PAD_OFFSET'] = 1;
-    }
-    if (geometry.data.aAltitude) {
-        defines['HAS_ALTITUDE'] = 1;
     }
 }
 
@@ -739,8 +747,8 @@ function buildLabelShape(iconGeometry) {
             const elements = iconGeometry.properties.textElements;
             for (let ii = start; ii < end; ii++) {
                 const idx = elements[ii];
-                const x = aShape[idx * 2];
-                const y = aShape[idx * 2 + 1];
+                const x = aShape[idx * 4];
+                const y = aShape[idx * 4 + 1];
                 if (x < minx) {
                     minx = x;
                 }

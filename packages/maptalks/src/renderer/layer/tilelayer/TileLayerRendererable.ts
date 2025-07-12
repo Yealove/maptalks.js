@@ -610,7 +610,7 @@ const TileLayerRenderable = function <T extends MixinConstructor>(Base: T) {
         loadTile(tile: Tile['info']): Tile['image'] {
             let tileImage = {} as Tile['image'];
             // fixme: 无相关定义，是否实现？
-            if (this.loadTileBitmap) {
+            if (this.loadTileBitmap && isFunction(this.loadTileBitmap)) {
                 const onLoad = (bitmap) => {
                     this.onTileLoad(bitmap, tile);
                 };
@@ -676,6 +676,14 @@ const TileLayerRenderable = function <T extends MixinConstructor>(Base: T) {
                 tileImage.onload = falseFn;
                 tileImage.onerror = falseFn;
                 tileImage.src = emptyImageUrl;
+            }
+            if (this.loadTileBitmap && isFunction(this.loadTileBitmap)) {
+                const url = tileInfo.url;
+                this.loadTileBitmap(url, tileInfo, () => {
+
+                }, {
+                    command: 'abortTile'
+                })
             }
         }
 
@@ -797,6 +805,7 @@ const TileLayerRenderable = function <T extends MixinConstructor>(Base: T) {
             //     return;
             // }
             const errorUrl = this.layer.options['errorUrl'];
+            const isFetchError = !(tileImage instanceof Image);
             if (errorUrl) {
                 if ((tileImage instanceof Image) && tileImage.src !== errorUrl) {
                     tileImage.src = errorUrl;
@@ -810,6 +819,9 @@ const TileLayerRenderable = function <T extends MixinConstructor>(Base: T) {
             this.abortTileLoading(tileImage, tileInfo);
 
             tileImage.loadTime = 0;
+            if (isFetchError) {
+                tileImage.fetchErrorTime = now();
+            }
             this.removeTileLoading(tileInfo);
             this._addTileToCache(tileInfo, tileImage);
             this.setToRedraw();
@@ -1260,6 +1272,16 @@ const TileLayerRenderable = function <T extends MixinConstructor>(Base: T) {
         setTerrainHelper(helper: TerrainHelper) {
             this._terrainHelper = helper;
         }
+
+        _validateTileImage(image) {
+            if (!image) {
+                return;
+            }
+            if (image.fetchErrorTime) {
+                return false;
+            }
+            return true;
+        }
     }
     return renderable;
 }
@@ -1303,6 +1325,7 @@ export type LayerId = string | number;
 export type TerrainHelper = any;
 export type TileImage = (HTMLImageElement | HTMLCanvasElement | ImageBitmap) & {
     loadTime: number;
+    fetchErrorTime: number;
     glBuffer?: TileImageBuffer;
     texture?: TileImageTexture;
     // onerrorTick?: number;

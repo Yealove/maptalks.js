@@ -396,6 +396,7 @@ class LinePainter extends BasicPainter {
                 symbolName: 'lineDx',
                 type: Int8Array,
                 width: 2,
+                index: 0,
                 define: 'HAS_LINE_DX',
                 evaluate: properties => {
                     const lineDx = aLineDxFn(map.getZoom(), properties);
@@ -408,6 +409,7 @@ class LinePainter extends BasicPainter {
                 symbolName: 'lineDy',
                 type: Int8Array,
                 width: 2,
+                index: 1,
                 define: 'HAS_LINE_DY',
                 evaluate: properties => {
                     const lineDy = aLineDyFn(map.getZoom(), properties);
@@ -522,7 +524,7 @@ class LinePainter extends BasicPainter {
         return isEnableStencil;
     }
 
-    getExtraCommandProps(context) {
+    getExtraCommandProps() {
         const canvas = this.canvas;
         const viewport = {
             x: (_, props) => {
@@ -542,8 +544,8 @@ class LinePainter extends BasicPainter {
         return {
             viewport,
             stencil: {
-                enable: () => {
-                    return this.isEnableTileStencil(context);
+                enable: (_, props) => {
+                    return this.isEnableTileStencil(props.painterContext);
                 },
                 func: {
                     cmp: () => {

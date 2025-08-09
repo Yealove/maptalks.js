@@ -114,7 +114,7 @@ describe('picking specs', () => {
                     },
                 },
                 'point': [736.00006, 736.00006, -0.00049],
-                'coordinate': [0.5053711339132829, 0.5053645811220168, 0.02859089700105285],
+                'coordinate': [0.5053711339132829, 0.5053645811220168, -0.02859089700105285],
                 'type': 'icon',
                 'plugin': 0
             }];
@@ -166,7 +166,7 @@ describe('picking specs', () => {
                     },
                 },
                 'point': [736.00006, 736.00006, -0.00049],
-                'coordinate': [0.5053711339132829, 0.5053645811220168, 0.02859089700105285],
+                'coordinate': [0.5053711339132829, 0.5053645811220168, -0.02859089700105285],
                 'type': 'icon',
                 'plugin': 0
             }];
@@ -211,7 +211,7 @@ describe('picking specs', () => {
                         'layer': 0
                     },
                 },
-                'coordinate': [0.5053711339132829, 0.5053645811220168, 0.02859089700105285],
+                'coordinate': [0.5053711339132829, 0.5053645811220168, -0.02859089700105285],
                 'point': [736.00006, 736.00006, -0.00049],
                 'type': 'icon',
                 'plugin': 0
@@ -246,6 +246,37 @@ describe('picking specs', () => {
             };
             const coord = [0.5, 0.5];
             const expected = 1;
+            runner(options, coord, expected, true, done);
+        });
+        it('should turn off picking by sceneConfig.interactive', done => {
+            const options = {
+                data: data.point,
+                style: [{
+                    renderPlugin: {
+                        type: 'icon',
+                        dataConfig: {
+                            type: 'point'
+                        },
+                        sceneConfig: {
+                            collision: true,
+                            fading: false,
+                            picking: false
+                        }
+                    },
+                    symbol: {
+                        markerFile: ICON_PATH
+                    }
+                }],
+                loadingLimit: 0,
+                view: {
+                    center: [0, 0],
+                    zoom: 6,
+                    pitch: 60,
+                    bearing: 90
+                }
+            };
+            const coord = [0.5, 0.5];
+            const expected = 0;
             runner(options, coord, expected, true, done);
         });
         it('should pick a icon with rotation alignment', done => {
@@ -1086,7 +1117,7 @@ describe('picking specs', () => {
             layer.once('canvasisdirty', () => {
                 const hit = layer.identify([13.41720, 52.52952])[0];
                 const expectedFeature = { "type": "Feature", "geometry": { "type": "Polygon","coordinates": [[[13.417135053741617,52.52956625878565],[13.417226248848124,52.52956625878565],[13.417226248848124,52.52946625878565],[13.417135053741617,52.52946625878565],[13.417135053741617,52.52956625878565]]] },"properties": { "type": 1, "color": "#f00", "foo": "bar", "foo1": "bar1" },"id": 0,"layer": 0 };
-                assert.deepEqual(hit.coordinate, [13.417198660412561, 52.52952080350727, 7.081154552807229e-10]);
+                assert.deepEqual(hit.coordinate, [13.417198660412561, 52.52952080350722, 7.081154570711357e-10]);
                 assert.deepEqual(expectedFeature, hit.data.feature);
                 done();
             });

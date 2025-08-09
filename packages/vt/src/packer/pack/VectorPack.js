@@ -113,6 +113,7 @@ export default class VectorPack {
             this.iconAtlas = options.atlas.iconAtlas;
             this.glyphAtlas = options.atlas.glyphAtlas;
         }
+        this.maxAltitude = 0;
         this.features = this._check(features);
     }
 
@@ -201,7 +202,7 @@ export default class VectorPack {
             while (Array.isArray(g)) {
                 g = g[0];
             }
-            if (!isNil(g.x)) {
+            if (g && !isNil(g.x)) {
                 //a converted one
                 checked = features;
             }
@@ -226,6 +227,28 @@ export default class VectorPack {
                 }
             }
         }
+        if (this.options.altitudeProperty) {
+            for (let i = 0; i < checked.length; i++) {
+                const feature = checked[i];
+                if (!feature || !feature.geometry || feature.type !== 1 && feature.type !== 4) {
+                    continue;
+                }
+                const altitude = this.getAltitude(feature.properties);
+                if (!altitude) {
+                    continue;
+                }
+                for (let j = 0; j < feature.geometry.length; j++) {
+                    const points = feature.geometry[j];
+                    if (!points || !points.length) {
+                        continue;
+                    }
+                    for (let k = 0; k < points.length; k++) {
+                        points[k].z = (points[k].z || 0) + altitude;
+                    }
+                }
+            }
+        }
+
 
         this.maxPosZ = 0;
         this.minPosZ = 0;
@@ -465,7 +488,7 @@ export default class VectorPack {
         this.maxPos = 0;
         this._minX = this._minY = Infinity;
         this._maxX = this._maxY = -Infinity;
-        this.maxAltitude = 0;
+
         this.dynamicAttrs = {};
         const data = this.data = {};
         this._arrayPool = arrayPool;
@@ -545,7 +568,7 @@ export default class VectorPack {
         if (this.hasElements() && !elements.getLength()) {
             return null;
         }
-        const isVector3D = !!this.options.center || this.options.isWebGPU;
+        const isVector3D = !!this.options.center;
         // maptalks/issues#541, Vector3D 时，因为数据会频繁修改，无法预知最终数量，aPickingId的类型固定为Float32Array，以适用所有情况
         const ArrType = isVector3D ? Float32Array : getUnsignedArrayType(maxFeaIndex);
         feaIdxValues = ArrayPool.createTypedArray(feaIdxValues, ArrType);

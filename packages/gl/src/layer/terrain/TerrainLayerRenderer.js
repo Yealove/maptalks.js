@@ -28,21 +28,6 @@ const TERRAIN_CLEAR = {
 
 const SKIN_LEVEL_LIMIT = 1;
 
-function terrainExaggeration(terrainData, exaggeration = 1) {
-    if (isNil(exaggeration) || !terrainData || !terrainData.mesh || exaggeration === 1) {
-        return;
-    }
-    const positions = terrainData.mesh.positions;
-    if (!positions) {
-        return;
-    }
-    for (let i = 0, len = positions.length; i < len; i += 3) {
-        positions[i + 2] *= exaggeration;
-    }
-}
-
-
-
 class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(LayerAbstractRenderer)) {
 
     constructor(...args) {
@@ -58,6 +43,7 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
         if (tile.image && !tile.image.reset) {
             return tile;
         }
+        this._debugTile(tileInfo, 'getTempTileOnLoading');
         const tempTerrain = this._createTerrainFromParent(tileInfo);
         tempTerrain.temp = true;
         if (!tile.image) {
@@ -116,7 +102,7 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
         while (parentTile && parentTile.image && (parentTile.image.sourceZoom === -1 || parentTile.image.originalError)) {
             parentTile = this.findParentTile(parentTile.info);
         }
-        const res = (parentTile && parentTile.info || tile).res;
+        const res = tile.res;
         const error = this.getMap().pointAtResToDistance(1, 1, res);
         const heights = parentTile && parentTile.image && parentTile.image.data && this._clipParentTerrain(parentTile, tile);
         const sourceZoom = heights && parentTile.image.sourceZoom !== -1 ? parentTile.info.z : -1;
@@ -126,7 +112,7 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
             return { data: createEmtpyTerrainHeights(minAltitude || 0, 5), minAltitude, mesh: EMPTY_TERRAIN_GEO, sourceZoom };
         }
         const terrainWidth = heights.width;
-        const mesh = createMartiniData(error, heights.data, terrainWidth, true);
+        const mesh = createMartiniData(error / 2, heights.data, terrainWidth, true);
 
         return { data: heights, mesh, sourceZoom };
     }
@@ -142,7 +128,8 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
                     continue;
                 }
                 const id = this.layer.getTileId(idx + i, idy + j, z);
-                const info = this.layer.tileInfoCache.get(id);
+                const tileInfoCache = this.layer.tileInfoCache;
+                const info = tileInfoCache && tileInfoCache.get(id);
                 if (info && info.minAltitude) {
                     return info.minAltitude;
                 }
@@ -152,6 +139,7 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
     }
 
     consumeTile(tileImage, tileInfo) {
+        this._debugTile(tileInfo, 'consumeTile');
         if (tileImage.empty && !tileImage.mesh) {
             const parentTile = this.findParentTile(tileInfo);
             if (!parentTile || parentTile.image && parentTile.image.empty) {
@@ -218,26 +206,31 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
         if (!this.drawingCurrentTiles && !this.drawingChildTiles) {
             return;
         }
+        this._debugTile(tileInfo, 'drawTile');
         let opacity = this.drawingCurrentTiles ? this.getTileOpacity(tileImage) : 1;
         opacity *= (this.layer.options.opacity || 1);
         this._painter.addTerrainImage(tileInfo, tileImage, opacity);
     }
 
-    _drawTiles(tiles, parentTiles, childTiles, placeholders, context, missedTiles/* , incompleteTiles */) {
+    _drawTiles(tiles, parentTiles, childTiles, placeholders, context, missedTiles, incompleteTiles) {
         const skinImagesToDel = [];
-
+        this._newTerrainTileCounter = 0;
+        const skinCount = this.layer.getSkinCount();
+        const visitedSkinTiles = new Set();
+        if (incompleteTiles && incompleteTiles.length) {
+            pushIn(missedTiles, incompleteTiles.map(t => t.info));
+            for (let i = 0; i < skinCount; i++) {
+                this._renderChildTerrainSkin(i, incompleteTiles, visitedSkinTiles, skinImagesToDel);
+            }
+        }
         //TODO tiles中如果存在empty瓦片，且sourceZoom精度不够的，可以重新切分精度更高的数据
         const tempTiles = this._getTempTilesForMissed(missedTiles, skinImagesToDel);
         pushIn(tiles, tempTiles);
 
         // this._tempTilesPool.shrink();
-        this._newTerrainTileCounter = 0;
-        const skinCount = this.layer.getSkinCount();
-        const visitedSkinTiles = new Set();
+
         // 集中对每个SkinLayer调用renderTerrainSkin，减少 program 的切换开销
-        // for (let i = 0; i < skinCount; i++) {
-        //     this._renderChildTerrainSkin(i, incompleteTiles, visitedSkinTiles, skinImagesToDel);
-        // }
+        this._debugTile(tiles, 'drawTiles');
         for (let i = 0; i < skinCount; i++) {
             this._renderChildTerrainSkin(i, tiles, visitedSkinTiles, skinImagesToDel);
         }
@@ -272,6 +265,7 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
 
         for (let i = 0; i < missedTiles.length; i++) {
             const tileInfo = missedTiles[i];
+            this._debugTile(tileInfo, 'getTempTilesForMissed');
             let tile;
             if (pool.has(tileInfo.id)) {
                 tile = pool.getAndRemove(tileInfo.id);
@@ -361,6 +355,7 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
         const layerSkinImages = [];
         for (let i = 0; i < terrainTiles.length; i++) {
             const { info, image } = terrainTiles[i];
+            this._debugTile(info, 'renderChildTerrainSkin');
             if (this._prepareChildTerrainSkin(skinIndex, info, image, skinImagesToDel)) {
                 const skinImages = terrainTiles[i].image.skinImages[skinIndex];
                 for (let j = 0; j < skinImages.length; j++) {
@@ -425,15 +420,20 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
         }
         const tileSize = this.layer.getTileSize().width;
         // const zoom = this.getCurrentTileZoom();
-        const { res: myRes, zoom } = getSkinTileRes(sr, z, res);
+        let { res: myRes, zoom } = getSkinTileRes(sr, z, res);
 
         const myTileSize = skinLayer.getTileSize().width;
 
-        const scale = getSkinTileScale(myRes, myTileSize, res, tileSize);
+        let scale = getSkinTileScale(myRes, myTileSize, res, tileSize);
 
         let skinTileIds = tileImage.skinTileIds[skinIndex];
         if (!skinTileIds) {
             const terrainTileScaleY = this.layer['_getTileConfig']().tileSystem.scale.y;
+            const maxAvailableZoom = skinLayer.options.maxAvailableZoom;
+            if (!isNil(maxAvailableZoom) && maxAvailableZoom >= 0 && zoom > maxAvailableZoom) {
+                scale *= Math.pow(2, maxAvailableZoom - zoom);
+                zoom = maxAvailableZoom;
+            }
             skinTileIds = tileImage.skinTileIds[skinIndex] = getCascadeTileIds(skinLayer, x, y, zoom, nw, offset, terrainTileScaleY, scale, SKIN_LEVEL_LIMIT);
         }
         const level0 = skinTileIds['0'];
@@ -568,6 +568,7 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
         if (!terrainTileInfo || !map || !tileImage) {
             return;
         }
+        this._debugTile(terrainTileInfo, '_renderTerrainMeshSkin');
         const skinImages = tileImage.skinImages;
         // if (!skinImages) {
         //     return;
@@ -662,7 +663,7 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
         canvas.width = tileSize;
         canvas.height = tileSize;
         const ctx = canvas.getContext('2d');
-        ctx.font = '20px monospace';
+        ctx.font = '60px monospace';
 
         const color = this.layer.options['debugOutline'];
         ctx.fillStyle = color;
@@ -949,7 +950,6 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
                     return;
                 }
                 maptalks.Util.extend(terrainData, resource);
-                terrainExaggeration(terrainData, this.layer.options.exaggeration);
 
                 // this.consumeTile(terrainData, tile);
                 tile.colorsTexture = terrainData.colorsTexture;
@@ -1173,7 +1173,11 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
             const scale = terrainRes / res;
             const x = worldPos.x - extent2d.xmin * scale;
             const y = extent2d.ymax * scale - worldPos.y;
-            const altitude = this._queryAltitudeInHeights(terrainData.image.data, x / (extent2d.getWidth() * scale), y / (extent2d.getHeight() * scale));
+            let altitude = this._queryAltitudeInHeights(terrainData.image.data, x / (extent2d.getWidth() * scale), y / (extent2d.getHeight() * scale));
+            const exaggeration = this.layer._getExaggeration();
+            if (exaggeration !== 0) {
+                altitude = altitude * exaggeration;
+            }
             out[0] = altitude;
             out[1] = altitude === null ? 0 : +(terrainData.info.z === tileIndex.z);
         } else {
@@ -1496,6 +1500,35 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
             return this._painter._leafScene.getMeshes();
         }
         return [];
+    }
+
+    _debugTile(tileInfo, name, debugOn) {
+        if (this.layer.options['debugTile']) {
+            if (Array.isArray(tileInfo)) {
+                for (let i = 0; i < tileInfo.length; i++) {
+                    if (!tileInfo[i]) {
+                        continue;
+                    }
+                    this._debugTile(tileInfo[i], name + ' at ' + i, debugOn);
+                }
+                return;
+            }
+            if (!tileInfo) {
+                return;
+            }
+            const { x, y, z } = this.layer.options['debugTile'];
+            const { info } = tileInfo;
+            if (info) {
+                tileInfo = info;
+            }
+            if (x === tileInfo.x && y === tileInfo.y && z === tileInfo.z) {
+                console.log(`Found debug tile in TerrainLayerRenderer.${name}:`, tileInfo);
+                if (debugOn) {
+                    // eslint-disable-next-line no-debugger
+                    debugger
+                }
+            }
+        }
     }
 }
 

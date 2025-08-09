@@ -188,18 +188,14 @@ class VectorTileLayerRenderer extends TileLayerRendererable(LayerAbstractRendere
     }
 
     //always redraw when map is interacting
-    needToRedraw() {
-        const redraw = super.needToRedraw();
-        if (!redraw) {
-            const plugins = this._getFramePlugins();
-            for (let i = 0; i < plugins.length; i++) {
-                if (plugins[i] && plugins[i].needToRedraw()) {
-                    return true;
-                }
-
+    testIfNeedRedraw() {
+        const plugins = this._getFramePlugins();
+        for (let i = 0; i < plugins.length; i++) {
+            if (plugins[i] && plugins[i].needToRedraw()) {
+                return true;
             }
         }
-        return redraw;
+        return super.testIfNeedRedraw();
     }
 
     needRetireFrames() {
@@ -213,6 +209,10 @@ class VectorTileLayerRenderer extends TileLayerRendererable(LayerAbstractRendere
             }
         }
         return false;
+    }
+
+    getCurrentTiles() {
+        return this._vtCurrentTiles;
     }
 
     isAnimating() {
@@ -575,8 +575,17 @@ class VectorTileLayerRenderer extends TileLayerRendererable(LayerAbstractRendere
     }
 
     getRenderedFeatures() {
-        const renderedFeatures = [];
         const keys = this.tileCache.keys();
+        return this._getFeaturesByKeys(keys);
+    }
+
+    getCurrentRenderedFeatures() {
+        const keys = this._vtCurrentTiles && Object.keys(this._vtCurrentTiles);
+        return this._getFeaturesByKeys(keys);
+    }
+
+    _getFeaturesByKeys(keys) {
+        const renderedFeatures = [];
         for (let i = 0; i < keys.length; i++) {
             const cache = this.tileCache.get(keys[i]);
             if (!cache || !cache.info || !cache.image) {
@@ -1335,6 +1344,9 @@ class VectorTileLayerRenderer extends TileLayerRendererable(LayerAbstractRendere
             if (!tileCache[idx]) {
                 return;
             }
+            if (this.drawingParentTiles && !plugin.painter.shouldDrawParentTile()) {
+                return;
+            }
             const isRenderingTerrainSkin = isRenderingTerrain && terrainSkinFilter(plugin);
             const regl = this.regl || this.device;
             const gl = this.gl;
@@ -1449,7 +1461,11 @@ class VectorTileLayerRenderer extends TileLayerRendererable(LayerAbstractRendere
             if (!plugin) {
                 return;
             }
-            const visible = this._isVisible(plugin);
+            const sceneConfig = plugin.painter && plugin.painter.sceneConfig;
+            if (sceneConfig.picking === false) {
+                return;
+            }
+            const visible = plugin.isVisible();
             if (!visible) {
                 return;
             }

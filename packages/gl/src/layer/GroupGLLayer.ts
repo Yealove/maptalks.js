@@ -74,6 +74,8 @@ export default class GroupGLLayer extends maptalks.Layer {
     _analysisTaskList: Analysis[]
     //@internal
     _terrainLayer: TerrainLayer
+    //@internal
+    _meterToGLPoint: number
 
     /**
      * @param id    - layer's id
@@ -129,6 +131,11 @@ export default class GroupGLLayer extends maptalks.Layer {
     getWeatherConfig(): SceneWeather {
         const sceneConfig = this._getSceneConfig();
         return sceneConfig.weather;
+    }
+
+    getScanEffectConfig(): ScanEffect {
+        const sceneConfig = this._getSceneConfig();
+        return sceneConfig.postProcess && sceneConfig.postProcess.scanEffect;
     }
 
     /**
@@ -621,7 +628,10 @@ export default class GroupGLLayer extends maptalks.Layer {
         });
 
         const from = map.pointAtResToCoordinate(new maptalks.Point(coord0[0], coord0[1]), glRes, EMPTY_COORD0);
-        from.z = coord0[2] / map.altitudeToPoint(1, glRes);
+        if (!this._meterToGLPoint) {
+            this._meterToGLPoint = map.altitudeToPoint(1, glRes)
+        }
+        from.z = coord0[2] / this._meterToGLPoint;
         const fromPoint = vec3.set(TEMP_VEC3, from.x, from.y, from.z);
 
         coordinates.sort((a, b) => {
@@ -875,6 +885,18 @@ export type SceneWeather = {
     }
 }
 
+export type ScanEffectItem = {
+    center: maptalks.Coordinate,
+    radius: number,
+    speed: number,
+    color: number[]//normal rgb
+}
+
+export type ScanEffect = {
+    enable?: boolean,
+    effects: ScanEffectItem[]
+}
+
 export type SceneShadow = {
     enable?: boolean,
     type?: 'esm',
@@ -914,7 +936,8 @@ export type ScenePostProcess = {
         outlineFactor?: number,
         outlineWidth?: number,
         outlineColor?: number[]
-    }
+    },
+    scanEffect?: ScanEffect
 }
 
 export type GroupGLLayerSceneConfig = {

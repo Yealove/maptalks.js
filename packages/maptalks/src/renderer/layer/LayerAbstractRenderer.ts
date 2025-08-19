@@ -442,8 +442,8 @@ class LayerAbstractRenderer extends Class {
      * @return {PointExtent} mask's extent of current zoom's 2d point.
      */
     prepareCanvas(): any {
-        const map = this.getMap();
-        const { canvas: mapCanvas, context: mapContext } = map.getRenderer();
+        const parent = this.layer.parent;
+        const { canvas: mapCanvas, context: mapContext } = parent.getRenderer();
         const isMapCanvasRenderer = mapContext instanceof CanvasRenderingContext2D;
         if (!this.context) {
             if (isMapCanvasRenderer) {
@@ -502,7 +502,7 @@ class LayerAbstractRenderer extends Class {
     }
 
     createContext() {
-
+        throw new Error('createContext not implemented');
     }
 
 
@@ -892,6 +892,12 @@ class LayerAbstractRenderer extends Class {
         //retina support
         canvas.height = height;
         canvas.width = width;
+        if (this.context) {
+            this.context.dpr = 1;
+        }
+        if (r !== 1 && this.context) {
+            this._canvasContextScale(this.context, r);
+        }
     }
 
     /**
@@ -952,6 +958,9 @@ class LayerAbstractRenderer extends Class {
 
     //@internal
     _canvasContextScale(context: CanvasRenderingContext2D, dpr: number) {
+        if (!context.scale) {
+            return this;
+        }
         context.scale(dpr, dpr);
         context.dpr = dpr;
         return this;

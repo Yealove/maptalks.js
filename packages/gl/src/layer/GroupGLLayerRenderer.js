@@ -118,7 +118,7 @@ class GroupGLLayerRenderer extends CanvasCompatible(LayerAbstractRenderer) {
         drawContext.hasSSRGround = !!(ssrMode && groundConfig && groundConfig.enable && groundConfig.symbol && groundConfig.symbol.ssr);
         fGL.resetDrawCalls();
         // this._renderInMode(enableTAA ? 'fxaaBeforeTaa' : 'fxaa', this._targetFBO, methodName, args);
-        this._renderInMode('default', this._targetFBO, methodName, args);
+        this._renderInMode('default', this._targetFBO, methodName, args, true);
         // this._fxaaDrawCount = fGL.getDrawCalls();
 
         // 重用上一帧的深度纹理，先绘制ssr图形
@@ -639,8 +639,10 @@ class GroupGLLayerRenderer extends CanvasCompatible(LayerAbstractRenderer) {
 
     onRemove() {
         //regl framebuffer for picking created by children layers
-        if (this.canvas.pickingFBO && this.canvas.pickingFBO.destroy) {
-            this.canvas.pickingFBO.destroy();
+        const pickingFBO = this.canvas.pickingFBO;
+        if (pickingFBO && pickingFBO.destroy && !pickingFBO['___disposed']) {
+            pickingFBO['___disposed'] = true;
+            pickingFBO.destroy();
         }
         this._destroyFramebuffers();
         if (this._groundPainter) {

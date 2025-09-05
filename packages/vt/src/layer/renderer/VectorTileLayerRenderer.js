@@ -683,19 +683,22 @@ class VectorTileLayerRenderer extends CanvasCompatible(TileLayerRendererable(Lay
                 data.data.push(oldData[i]);
             }
         }
+        const debugTileData = layer.options['debugTileData'];
         data.layers = layers;
         for (let i = 0; i < tiles.length; i++) {
             const tileInfo = tiles[i];
             if (i === 0) {
-                if (layer.options['debugTileData']) {
+                if (debugTileData) {
                     const { x, y, z } = tileInfo;
-                    console.log('tile', {
-                        'layerId': layer.getId(),
-                        x,
-                        y,
-                        z,
-                        layers: groupFeatures(Object.values(features))
-                    });
+                    if (debugTileData === true || debugTileData.x === x && debugTileData.y === y && debugTileData.z === z) {
+                        console.log('tile', {
+                            'layerId': layer.getId(),
+                            x,
+                            y,
+                            z,
+                            layers: groupFeatures(Object.values(features))
+                        });
+                    }
                 }
             }
             const tileData = i === 0 ? data : copyTileData(data);
@@ -1071,7 +1074,7 @@ class VectorTileLayerRenderer extends CanvasCompatible(TileLayerRendererable(Lay
 
     _getPluginContext(plugin, polygonOffsetIndex, cameraPosition, timestamp) {
         const isRenderingTerrain = this._isRenderingTerrain();
-        const isRenderingTerrainSkin = isRenderingTerrain && plugin && terrainSkinFilter(plugin);;
+        const isRenderingTerrainSkin = isRenderingTerrain && plugin && terrainSkinFilter(plugin);
         const regl = this.regl || this.device;
         const gl = this.gl;
         const context = {
@@ -1584,7 +1587,6 @@ class VectorTileLayerRenderer extends CanvasCompatible(TileLayerRendererable(Lay
             delete this._debugPainter;
         }
         if (this._terrainDepthStencil) {
-            this._terrainDepthStencil.colorTex.destroy();
             this._terrainDepthStencil.destroy();
             delete this._terrainDepthStencil;
         }

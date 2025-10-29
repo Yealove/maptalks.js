@@ -718,8 +718,9 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
         const width = tileSize * 2;
         const height = tileSize * 2;
         const color = regl.texture({
-            min: 'linear',
-            mag: 'linear',
+            // min 和 mag 必须用nearest，选择别的值会造成mask的高程值发生错误
+            min: 'nearest',
+            mag: 'nearest',
             type: 'uint8',
             format: 'rgba',
             width,
@@ -757,7 +758,7 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
         const regl = this.device;
         const colorsTexture = tileInfo.colorsTexture;
         let color;
-        if (colorsTexture && colorsTexture instanceof Uint8Array) {
+        if (maptalks.Util.isImageBitMap(colorsTexture)) {
             color = regl.texture({
                 data: colorsTexture,
                 min: 'linear',
@@ -1016,6 +1017,7 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
 
                 // this.consumeTile(terrainData, tile);
                 tile.colorsTexture = terrainData.colorsTexture;
+                delete terrainData.colorsTexture;
                 this.onTileLoad(terrainData, tile);
             });
         };
@@ -1058,9 +1060,16 @@ class TerrainLayerRenderer extends MaskRendererMixin(TileLayerRendererable(Layer
         }
         delete info.skinTileIds;
         this._deleteTerrainImage(tile.info, image);
+
     }
 
     _deleteTerrainImage(tileInfo, image) {
+        if (tileInfo && tileInfo.colorsTexture) {
+            if (tileInfo.colorsTexture.close) {
+                tileInfo.colorsTexture.close();
+            }
+            delete tileInfo.colorsTexture;
+        }
         const skin = image.skin;
         if (skin) {
             skin.destroy();

@@ -1,5 +1,27 @@
 # @maptalks/gpu
 
+## 0.115.1
+
+### Patch Changes
+
+- fixes related with terrain
+- Updated dependencies
+  - @maptalks/fusiongl@0.115.1
+  - @maptalks/gltf-loader@0.115.1
+
+## 0.115.0
+
+### Minor Changes
+
+- focusing on bug fixes and serveral improvements
+
+### Patch Changes
+
+- Updated dependencies
+  - @maptalks/fusiongl@0.115.0
+  - @maptalks/gltf-loader@0.115.0
+  - maptalks@1.5.0
+
 ## 0.110.0
 
 ### Minor Changes

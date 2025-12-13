@@ -21,7 +21,9 @@ export default class GraphicsDevice {
     _defaultFramebuffer: GraphicsFramebuffer;
     //@internal
     _readTargets: Record<number, GPUBuffer> = {};
+    //@internal
     _supportedFormats: any;
+    //@internal
     _drawCount: 0;
 
     constructor(device: GPUDevice, context: GPUCanvasContext, adapter: GPUAdapter) {
@@ -116,6 +118,12 @@ export default class GraphicsDevice {
         }
     }
 
+    preserveDrawingBuffer(canvas) {
+        canvas.width = this.context.canvas.width;
+        canvas.height = this.context.canvas.height;
+        canvas.getContext('2d').drawImage(this.context.canvas, 0, 0);
+    }
+
     // implementation of regl.buffer
     buffer(options) {
         return Geometry.createBuffer(this, options, options.name);
@@ -149,7 +157,7 @@ export default class GraphicsDevice {
 
     // implementation of regl.clear
     clear(options) {
-        const fbo = options.framebuffer || this.getDefaultFramebuffer();
+        const fbo = (options.framebuffer || this.getDefaultFramebuffer()) as GraphicsFramebuffer;
         fbo.setClearOptions(options);
     }
 

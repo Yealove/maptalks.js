@@ -104,11 +104,25 @@ export default class CommandBuilder {
 
         // console.log('vert', vert);
         // console.log('frag', frag);
-        const vertReflect = new WgslReflect(vert);
+        let vertReflect;
+        try {
+            vertReflect = new WgslReflect(vert);
+        } catch (error) {
+            console.error('WGSL Reflect vert error in ' + this.name, error);
+            console.error(vert);
+            throw error;
+        }
+
         const vertexInfo = this._formatBufferInfo(vertReflect, mesh);
         let fragReflect;
         if (frag) {
-            fragReflect = new WgslReflect(frag);
+            try {
+                fragReflect = new WgslReflect(frag);
+            } catch (error) {
+                console.error('WGSL Reflect frag error in ' + this.name, error);
+                console.error(frag);
+                throw error;
+            }
         }
 
         const vertGroups = vertReflect.getBindGroups();
@@ -251,10 +265,12 @@ export default class CommandBuilder {
         const vertexInfo = {};
         const data = mesh.geometry.data;
         const semantic = mesh.geometry.semantic;
+        const visited = new Set();
         for (const name in data) {
             const attr = semantic[name] || name;
             const info = inputMapping[attr];
             if (info) {
+                visited.add(attr);
                 vertexInfo[attr] = {
                     geoAttrName: name,
                     location: info.location,
@@ -263,7 +279,7 @@ export default class CommandBuilder {
             }
         }
         for (const name in inputMapping) {
-            if (!data[name]) {
+            if (!visited.has(name)) {
                 const info = inputMapping[name];
                 vertexInfo[name] = {
                     geoAttrName: name,
